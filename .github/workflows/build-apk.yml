@@ -1,0 +1,53 @@
+name: Build DownKit APK
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - "DownKit-Android-source.zip"
+      - ".github/workflows/build-apk.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "21"
+
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Install Android SDK components
+        run: |
+          yes | sdkmanager --licenses
+          sdkmanager "platforms;android-36" "build-tools;36.0.0" "ndk;27.2.12479018" "cmake;3.22.1"
+
+      - name: Extract DownKit project
+        run: |
+          test -f DownKit-Android-source.zip
+          unzip -oq DownKit-Android-source.zip -d .
+          test -f DownKit-Android/gradlew
+          test -f DownKit-Android/settings.gradle.kts
+
+      - name: Build APKs
+        working-directory: DownKit-Android
+        run: |
+          chmod +x ./gradlew
+          ./gradlew --no-daemon --stacktrace assembleDebug
+
+      - name: Upload APK artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: DownKit-debug-apks
+          path: DownKit-Android/app/build/outputs/apk/debug/*.apk
+          if-no-files-found: error
+          retention-days: 14

@@ -5,6 +5,7 @@ on:
   push:
     paths:
       - "DownKit-Android-source.zip"
+      - ".github/workflows/build-apk.yml"
 
 permissions:
   contents: read

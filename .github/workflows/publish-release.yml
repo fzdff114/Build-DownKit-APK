@@ -1,0 +1,55 @@
+name: Publish DownKit APK Release
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - ".github/workflows/publish-release.yml"
+
+permissions:
+  actions: read
+  contents: write
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Download verified build artifact
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          gh run download 41967690498 --repo "$GITHUB_REPOSITORY" --name DownKit-debug-apks --dir release-files
+          test -s release-files/app-debug.apk
+          unzip -t release-files/app-debug.apk >/dev/null
+          sha256sum release-files/app-debug.apk | tee release-files/SHA256SUMS.txt
+          ls -lh release-files/
+
+      - name: Publish GitHub Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          TAG="v1.0.0"
+          NOTES="$(cat <<'EOF'
+          ## DownKit Android 1.0.0 — ARM64 Debug
+
+          - Android APK for ARM64 (arm64-v8a) devices.
+          - Built from the DownKit Android project using yt-dlp 2026.10.26.
+          - Includes embedded Python 3.13 and FFmpeg native libraries.
+          - This is a debug-signed test release, not a production/release-signed build.
+
+          Install app-debug.apk on an ARM64 Android device. Android may ask you to allow installation from this source.
+
+          See SHA256SUMS.txt to verify the APK download.
+          EOF
+          )"
+          if gh release view "$TAG" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
+            gh release upload "$TAG" release-files/app-debug.apk release-files/SHA256SUMS.txt --repo "$GITHUB_REPOSITORY" --clobber
+          else
+            gh release create "$TAG" release-files/app-debug.apk release-files/SHA256SUMS.txt --repo "$GITHUB_REPOSITORY" --title "DownKit 1.0.0 (ARM64 Debug)" --notes "$NOTES" --prerelease
+          fi
+          gh release view "$TAG" --repo "$GITHUB_REPOSITORY" --json url,name,isPrerelease,assets

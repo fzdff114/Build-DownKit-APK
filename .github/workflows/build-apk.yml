@@ -27,6 +27,7 @@ jobs:
         shell: bash
         run: |
           set -eu
+          set +o pipefail
           SDKMANAGER="$(find "${ANDROID_HOME:-/usr/local/lib/android/sdk}/cmdline-tools" -type f -name sdkmanager | sort -V | tail -n 1)"
           if [[ -z "$SDKMANAGER" ]]; then
             echo "sdkmanager not found in Android SDK installation"

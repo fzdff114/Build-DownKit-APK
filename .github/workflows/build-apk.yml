@@ -23,6 +23,14 @@ jobs:
           distribution: temurin
           java-version: "21"
 
+      - name: Set up Python for Chaquopy
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.13"
+
+      - name: Verify build Python
+        run: python3.13 --version
+
       - name: Install Android SDK components
         shell: bash
         run: |

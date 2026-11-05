@@ -72,13 +72,13 @@ parse_block = replace_once(
 )
 parse_block = replace_once(
     parse_block,
-    """            runOnUiThread {
+    '''            runOnUiThread {
                 parseButton?.isEnabled = true
-                parseButton?.text = "解析链接"""",
-    """            runOnUiThread {
+                parseButton?.text = "解析链接"''',
+    '''            runOnUiThread {
                 if (requestGeneration != parseGeneration || urlField?.text?.toString()?.trim() != url) return@runOnUiThread
                 parseButton?.isEnabled = true
-                parseButton?.text = "解析链接"""",
+                parseButton?.text = "解析链接"''',
     "ignore stale asynchronous parse results",
 )
 parse_block = replace_once(

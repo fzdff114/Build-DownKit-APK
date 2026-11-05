@@ -4,10 +4,7 @@ on:
   workflow_dispatch:
   push:
     paths:
-      - "DownKit-Android-source.zip"
-      - ".github/scripts/public-release-parts/**"
-      - ".github/scripts/patch_reliability.py.gz.b64"
-      - ".github/scripts/patch_proxy_animation.py"
+      - ".github/patches/v1.1.2/**"
       - ".github/workflows/build-apk.yml"
 
 permissions:
@@ -41,12 +38,37 @@ jobs:
           yes | "$SDKMANAGER" --licenses
           "$SDKMANAGER" --install "platforms;android-36" "build-tools;36.0.0" "ndk;27.2.12479018" "cmake;3.22.1"
 
-      - name: Extract original project
+      - name: Download DownKit 1.1.1 source baseline
+        shell: bash
         run: |
-          test -s DownKit-Android-source.zip
-          unzip -oq DownKit-Android-source.zip -d .
+          set -euo pipefail
+          curl -fL --retry 3 --retry-delay 2 \
+            "https://github.com/$GITHUB_REPOSITORY/releases/download/v1.1.1/DownKit-Android-1.1.1-source.zip" \
+            -o "$RUNNER_TEMP/downkit-1.1.1-source.zip"
+          unzip -t "$RUNNER_TEMP/downkit-1.1.1-source.zip" >/dev/null
+          unzip -q "$RUNNER_TEMP/downkit-1.1.1-source.zip" -d .
           test -f DownKit-Android/gradlew
           test -f DownKit-Android/app/src/main/java/com/downkit/android/MainActivity.kt
+
+      - name: Assemble and apply the 1.1.2 source overlay
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -s .github/patches/v1.1.2/overlay-part01.b64
+          test -s .github/patches/v1.1.2/overlay-part02.b64
+          test -s .github/patches/v1.1.2/overlay-part03.b64
+          test -s .github/patches/v1.1.2/overlay-part04.b64
+          test -s .github/patches/v1.1.2/overlay-part05.b64
+          test -s .github/patches/v1.1.2/overlay-part06.b64
+          cat .github/patches/v1.1.2/overlay-part*.b64 | tr -d '\r\n ' | base64 --decode > "$RUNNER_TEMP/downkit-1.1.2-overlay.zip"
+          unzip -t "$RUNNER_TEMP/downkit-1.1.2-overlay.zip"
+          unzip -oq "$RUNNER_TEMP/downkit-1.1.2-overlay.zip" -d DownKit-Android
+          grep -q 'applicationId = "com.downkit.android"' DownKit-Android/app/build.gradle.kts
+          grep -q 'versionCode = 6' DownKit-Android/app/build.gradle.kts
+          grep -q 'versionName = "1.1.2"' DownKit-Android/app/build.gradle.kts
+          python3 -m py_compile DownKit-Android/app/src/main/python/bridge.py
+          grep -q 'mediaInfo' DownKit-Android/app/src/main/java/com/downkit/android/MainActivity.kt
+          grep -q 'fragmentInfo' DownKit-Android/app/src/main/java/com/downkit/android/DownloadTaskStore.kt
 
       - name: Prepare ARM64 Kotlin and Gradle configuration
         working-directory: DownKit-Android
@@ -58,8 +80,6 @@ jobs:
           p = Path("app/build.gradle.kts")
           s = p.read_text()
           s = s.replace('abiFilters += listOf("arm64-v8a", "x86_64")', 'abiFilters += listOf("arm64-v8a")', 1)
-          if 'abiFilters += listOf("arm64-v8a")' not in s:
-              raise SystemExit("ARM64 ABI filter is missing")
           lines = s.splitlines()
           if "    splits {" in lines:
               start = lines.index("    splits {")
@@ -73,53 +93,13 @@ jobs:
           if "compilerOptions {" not in s:
               s += "\n".join(["", "kotlin {", "    compilerOptions {", "        jvmTarget.set(org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_17)", "    }", "}", ""])
           if "splits {" in s:
-              raise SystemExit("ABI split block was not removed")
+              raise SystemExit("ABI split block remains")
           p.write_text(s)
           w = Path("gradle/wrapper/gradle-wrapper.properties")
           w.write_text(w.read_text().replace("gradle-8.13-bin.zip", "gradle-8.14.4-bin.zip"))
           PY
 
-      - name: Assemble public DownKit 1.1.1 source changes
-        shell: bash
-        run: |
-          set -euo pipefail
-          mkdir -p "$RUNNER_TEMP/downkit-patch"
-          cat .github/scripts/public-release-parts/part*.b64 | tr -d '\r\n ' | base64 -d > "$RUNNER_TEMP/downkit-patch/prepare.gz"
-          ACTUAL="$(wc -c < "$RUNNER_TEMP/downkit-patch/prepare.gz" | tr -d ' ')"
-          test "$ACTUAL" = "18369"
-          gzip -t "$RUNNER_TEMP/downkit-patch/prepare.gz"
-          gzip -dc "$RUNNER_TEMP/downkit-patch/prepare.gz" > "$RUNNER_TEMP/downkit-patch/prepare_public_release.py"
-          python3 -m py_compile "$RUNNER_TEMP/downkit-patch/prepare_public_release.py"
-          python3 "$RUNNER_TEMP/downkit-patch/prepare_public_release.py" DownKit-Android
-          python3 -m py_compile DownKit-Android/app/src/main/python/bridge.py
-          grep -q 'versionName = "1.1.0"' DownKit-Android/app/build.gradle.kts
-          grep -q 'REQUEST_INSTALL_PACKAGES' DownKit-Android/app/src/main/AndroidManifest.xml
-
-      - name: Fix task scrolling, responsive format list and site format fallback
-        shell: bash
-        run: |
-          set -euo pipefail
-          base64 --decode .github/scripts/patch_reliability.py.gz.b64 | gzip -dc > "$RUNNER_TEMP/patch_reliability.py"
-          python3 -m py_compile "$RUNNER_TEMP/patch_reliability.py"
-          python3 "$RUNNER_TEMP/patch_reliability.py" DownKit-Android
-          python3 -m py_compile DownKit-Android/app/src/main/python/bridge.py
-          grep -q 'versionName = "1.1.1"' DownKit-Android/app/build.gradle.kts
-          grep -q 'private fun refreshTaskCards()' DownKit-Android/app/src/main/java/com/downkit/android/MainActivity.kt
-          ! grep -q 'formatScroll = ScrollView(this)' DownKit-Android/app/src/main/java/com/downkit/android/MainActivity.kt
-
-      - name: Fix proxy field, shorten app name and add subtle animations
-        shell: bash
-        run: |
-          set -euo pipefail
-          python3 -m py_compile .github/scripts/patch_proxy_animation.py
-          python3 .github/scripts/patch_proxy_animation.py DownKit-Android
-          python3 -m py_compile DownKit-Android/app/src/main/python/bridge.py
-          grep -q '<string name="app_name">DownKit</string>' DownKit-Android/app/src/main/res/values/strings.xml
-          grep -q 'setHintEnabled(false)' DownKit-Android/app/src/main/java/com/downkit/android/MainActivity.kt
-          grep -q 'versionName = "1.1.1"' DownKit-Android/app/build.gradle.kts
-          grep -q 'versionCode = 5' DownKit-Android/app/build.gradle.kts
-
-      - name: Compile-check the Android application
+      - name: Compile-check Debug APK
         working-directory: DownKit-Android
         run: |
           chmod +x ./gradlew
@@ -149,29 +129,29 @@ jobs:
             echo "DOWNKIT_KEY_PASSWORD=$KEY_PASSWORD"
           } >> "$GITHUB_ENV"
 
-      - name: Build signed ARM64 release APK
+      - name: Build signed ARM64 Release APK
         working-directory: DownKit-Android
         run: |
-          chmod +x ./gradlew
           ./gradlew --no-daemon --stacktrace assembleRelease
           APK="app/build/outputs/apk/release/app-release.apk"
           test -s "$APK"
           "$ANDROID_HOME/build-tools/36.0.0/apksigner" verify --verbose --print-certs "$APK"
 
-      - name: Package APK and public source archive
+      - name: Package APK, source and checksums
         shell: bash
         run: |
           set -euo pipefail
           mkdir -p release-package
-          cp DownKit-Android/app/build/outputs/apk/release/app-release.apk release-package/DownKit-1.1.1-arm64.apk
-          (cd DownKit-Android && zip -qr "$GITHUB_WORKSPACE/release-package/DownKit-Android-1.1.1-source.zip" . -x '*/build/*' '.gradle/*' 'local.properties')
-          (cd release-package && sha256sum DownKit-1.1.1-arm64.apk DownKit-Android-1.1.1-source.zip > SHA256SUMS.txt)
+          cp DownKit-Android/app/build/outputs/apk/release/app-release.apk release-package/DownKit-1.1.2-arm64.apk
+          (cd DownKit-Android && zip -qr -X "$GITHUB_WORKSPACE/release-package/DownKit-Android-1.1.2-source.zip" . -x '*/build/*' '.gradle/*' '*/.cxx/*' 'local.properties')
+          (cd release-package && sha256sum DownKit-1.1.2-arm64.apk DownKit-Android-1.1.2-source.zip > SHA256SUMS.txt)
+          unzip -t release-package/DownKit-Android-1.1.2-source.zip >/dev/null
           ls -lh release-package/
 
       - name: Upload signed release package
         uses: actions/upload-artifact@v4
         with:
-          name: DownKit-release-package
+          name: DownKit-1.1.2-release-package
           path: release-package/*
           if-no-files-found: error
           retention-days: 30

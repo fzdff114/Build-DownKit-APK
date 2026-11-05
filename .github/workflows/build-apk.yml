@@ -107,7 +107,7 @@ jobs:
           source = bridge.read_text()
           old_import = "from java import jarray, jclass, jstring"
           new_import = "from java import jclass"
-          old_call = 'java_args = jarray(jstring)(arguments)\\n                jclass("com.downkit.android.FfmpegBridge").execute(java_args)'
+          old_call = "java_args = jarray(jstring)(arguments)" + chr(10) + '                jclass("com.downkit.android.FfmpegBridge").execute(java_args)'
           new_call = 'jclass("com.downkit.android.FfmpegBridge").execute(arguments)'
           if old_import not in source or old_call not in source:
               raise SystemExit("Expected broken Chaquopy jstring bridge was not found; refusing an unsafe partial patch")

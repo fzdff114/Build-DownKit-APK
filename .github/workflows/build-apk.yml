@@ -146,155 +146,86 @@ jobs:
           s = p.read_text()
           s = replace_once(s,
               "    private var parsedInfo: JSONObject? = null",
-              "    private var parsedInfo: JSONObject? = null\n    private var parsedUrl: String? = null\n    private var parseGeneration: Long = 0L",
+              "    private var parsedInfo: JSONObject? = null\\n    private var parsedUrl: String? = null\\n    private var parseGeneration: Long = 0L",
               "parsed URL fields")
           s = replace_once(s,
-              "    private fun renderHome() {\n        currentTab = 1",
-              "    private fun renderHome() {\n        currentTab = 1\n        parseGeneration += 1\n        parsedInfo = null\n        parsedUrl = null\n        formats = emptyList()",
+              "    private fun renderHome() {\\n        currentTab = 1",
+              "    private fun renderHome() {\\n        currentTab = 1\\n        parseGeneration += 1\\n        parsedInfo = null\\n        parsedUrl = null\\n        formats = emptyList()",
               "home view reset")
 
-          old = """        urlField = TextInputEditText(this).apply {
-              setSingleLine(true)
-              textSize = 15f
-              inputType = android.text.InputType.TYPE_CLASS_TEXT or android.text.InputType.TYPE_TEXT_VARIATION_URI
-              hint = "https://..."
-          }
-          linkLayout.addView(urlField)
-          """
-          new = """        urlField = TextInputEditText(this).apply {
-              setSingleLine(true)
-              textSize = 15f
-              inputType = android.text.InputType.TYPE_CLASS_TEXT or android.text.InputType.TYPE_TEXT_VARIATION_URI
-              hint = "https://..."
-          }
-          urlField?.addTextChangedListener(object : android.text.TextWatcher {
-              override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) = Unit
-              override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) = Unit
-              override fun afterTextChanged(s: android.text.Editable?) {
-                  parseGeneration += 1
-                  parsedInfo = null
-                  parsedUrl = null
-                  formats = emptyList()
-                  downloadButton?.isEnabled = false
-                  parseButton?.isEnabled = true
-                  parseButton?.text = "解析链接"
-                  infoCard?.visibility = View.GONE
-              }
-          })
-          linkLayout.addView(urlField)
-          """
-          s = replace_once(s, old, new, "URL editing invalidates parsed state")
+          watcher = "\\n".join([
+              "        urlField?.addTextChangedListener(object : android.text.TextWatcher {",
+              "            override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) = Unit",
+              "            override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) = Unit",
+              "            override fun afterTextChanged(s: android.text.Editable?) {",
+              "                parseGeneration += 1",
+              "                parsedInfo = null",
+              "                parsedUrl = null",
+              "                formats = emptyList()",
+              "                downloadButton?.isEnabled = false",
+              "                parseButton?.isEnabled = true",
+              '                parseButton?.text = "解析链接"',
+              "                infoCard?.visibility = View.GONE",
+              "            }",
+              "        })",
+              "        linkLayout.addView(urlField)"
+          ])
+          s = replace_once(s, "        linkLayout.addView(urlField)", watcher, "URL edit invalidation watcher")
 
-          old = """    private fun parseLink() {
-              val url = urlField?.text?.toString()?.trim().orEmpty()
-              if (!(url.startsWith("https://") || url.startsWith("http://"))) {
-                  toast("请先粘贴完整的视频链接")
-                  return
-              }
-              parsedInfo = null
-          """
-          new = """    private fun parseLink() {
-              val url = urlField?.text?.toString()?.trim().orEmpty()
-              val parsedUri = runCatching { Uri.parse(url) }.getOrNull()
-              if (!(url.startsWith("https://") || url.startsWith("http://")) || parsedUri?.host.isNullOrBlank()) {
-                  toast("请先粘贴完整的视频链接")
-                  return
-              }
-              val requestGeneration = ++parseGeneration
-              parsedInfo = null
-              parsedUrl = null
-          """
-          s = replace_once(s, old, new, "parse captures URL")
+          old = "        val url = urlField?.text?.toString()?.trim().orEmpty()\\n        if (!(url.startsWith(\\"https://\\") || url.startsWith(\\"http://\\"))) {"
+          new = "        val url = urlField?.text?.toString()?.trim().orEmpty()\\n        val parsedUri = runCatching { Uri.parse(url) }.getOrNull()\\n        if (!(url.startsWith(\\"https://\\") || url.startsWith(\\"http://\\")) || parsedUri?.host.isNullOrBlank()) {"
+          s = replace_once(s, old, new, "validate complete URL before parsing")
 
-          old = """            runOnUiThread {
-                parseButton?.isEnabled = true
-                parseButton?.text = "解析链接"
-                val result = runCatching { JSONObject(raw) }.getOrElse { JSONObject().put("ok", false).put("error", "解析结果格式错误") }
-          """
-          new = """            runOnUiThread {
-                if (requestGeneration != parseGeneration || urlField?.text?.toString()?.trim() != url) return@runOnUiThread
-                parseButton?.isEnabled = true
-                parseButton?.text = "解析链接"
-                val result = runCatching { JSONObject(raw) }.getOrElse { JSONObject().put("ok", false).put("error", "解析结果格式错误") }
-          """
-          s = replace_once(s, old, new, "ignore stale parse response")
-          s = replace_once(s,
-              "                parsedInfo = result\n                val views = infoCard?.tag as? HomeViews",
-              "                parsedInfo = result\n                parsedUrl = url\n                val views = infoCard?.tag as? HomeViews",
-              "persist inspected URL snapshot")
+          old = "        parsedInfo = null\\n        downloadButton?.isEnabled = false"
+          new = "        val requestGeneration = ++parseGeneration\\n        parsedInfo = null\\n        parsedUrl = null\\n        downloadButton?.isEnabled = false"
+          parse_start = s.index("    private fun parseLink()")
+          parse_end = s.index("    private fun startDownload()", parse_start)
+          parse_block = s[parse_start:parse_end]
+          parse_block = replace_once(parse_block, old, new, "store parse generation")
+          parse_block = replace_once(parse_block,
+              "            runOnUiThread {\\n                parseButton?.isEnabled = true",
+              "            runOnUiThread {\\n                if (requestGeneration != parseGeneration || urlField?.text?.toString()?.trim() != url) return@runOnUiThread\\n                parseButton?.isEnabled = true",
+              "ignore stale parse results")
+          parse_block = replace_once(parse_block,
+              "                parsedInfo = result\\n                val views = infoCard?.tag as? HomeViews",
+              "                parsedInfo = result\\n                parsedUrl = url\\n                val views = infoCard?.tag as? HomeViews",
+              "bind metadata to the input URL")
+          s = s[:parse_start] + parse_block + s[parse_end:]
 
-          old = """    private fun startDownload() {
-              val info = parsedInfo ?: return toast("请先解析链接")
-              val choice = formats.getOrNull(formatSpinner?.selectedItemPosition ?: 0) ?: formats.firstOrNull() ?: return
-              val task = DownloadTaskStore.add(
-                  this,
-                  urlField?.text?.toString()?.trim().orEmpty(),
-                  info.optString("title", "媒体下载"),
-                  choice.selector,
-                  choice.label
-              )
-          """
-          new = """    private fun startDownload() {
-              val info = parsedInfo ?: return toast("请先解析当前链接")
-              val url = parsedUrl?.takeIf { it.isNotBlank() }
-                  ?: return toast("链接已变化或未保存，请重新解析")
-              if (urlField?.text?.toString()?.trim() != url) {
-                  parsedInfo = null
-                  parsedUrl = null
-                  downloadButton?.isEnabled = false
-                  return toast("链接已变化，请重新解析后再下载")
-              }
-              val choice = formats.getOrNull(formatSpinner?.selectedItemPosition ?: 0) ?: formats.firstOrNull() ?: return
-              val task = runCatching {
-                  DownloadTaskStore.add(this, url, info.optString("title", "媒体下载"), choice.selector, choice.label)
-              }.getOrElse {
-                  toast(it.message ?: "无法保存下载任务")
-                  return
-              }
-          """
-          s = replace_once(s, old, new, "queue the parsed URL, not editable text")
+          start = s.index("    private fun startDownload()")
+          end = s.index("    private fun renderTasks()", start)
+          download = s[start:end]
+          download = replace_once(download,
+              '        val info = parsedInfo ?: return toast("请先解析链接")\\n        val choice',
+              '        val info = parsedInfo ?: return toast("请先解析当前链接")\\n        val url = parsedUrl?.takeIf { it.isNotBlank() }\\n            ?: return toast("链接已变化或未保存，请重新解析")\\n        if (urlField?.text?.toString()?.trim() != url) {\\n            parsedInfo = null\\n            parsedUrl = null\\n            downloadButton?.isEnabled = false\\n            return toast("链接已变化，请重新解析后再下载")\\n        }\\n        val choice',
+              "queue uses URL snapshot")
+          download = replace_once(download,
+              "            urlField?.text?.toString()?.trim().orEmpty(),",
+              "            url,",
+              "do not reread editable URL field")
+          s = s[:start] + download + s[end:]
+
           s = replace_once(s,
               '            body.addView(text(task.title, 15, true, Color.rgb(23, 32, 51)).apply { maxLines = 2 }, margin(bottom = 5))',
-              '            body.addView(text(task.title, 15, true, Color.rgb(23, 32, 51)).apply { maxLines = 2 }, margin(bottom = 4))\n            body.addView(text(task.url, 11, false, Color.rgb(122, 132, 150)).apply { maxLines = 1; ellipsize = android.text.TextUtils.TruncateAt.END }, margin(bottom = 7))',
-              "display stored task URL")
+              '            body.addView(text(task.title, 15, true, Color.rgb(23, 32, 51)).apply { maxLines = 2 }, margin(bottom = 4))\\n            body.addView(text(task.url, 11, false, Color.rgb(122, 132, 150)).apply { maxLines = 1; ellipsize = android.text.TextUtils.TruncateAt.END }, margin(bottom = 7))',
+              "show saved source URL on task card")
           p.write_text(s)
 
           p = Path("app/src/main/java/com/downkit/android/DownloadTaskStore.kt")
           s = p.read_text()
-          s = replace_once(s, "import android.content.Context", "import android.content.Context\nimport android.net.Uri", "Uri import")
+          s = replace_once(s, "import android.content.Context", "import android.content.Context\\nimport android.net.Uri", "URI validation import")
           s = replace_once(s,
               "    private fun write(context: Context, tasks: List<DownloadTask>) {",
               "    private fun write(context: Context, tasks: List<DownloadTask>, persistImmediately: Boolean = false) {",
-              "durable write mode")
+              "durable task writes")
           s = replace_once(s,
               '        context.getSharedPreferences(FILE, Context.MODE_PRIVATE).edit().putString(KEY, array.toString()).apply()',
-              '        val editor = context.getSharedPreferences(FILE, Context.MODE_PRIVATE).edit().putString(KEY, array.toString())\n        if (persistImmediately) {\n            check(editor.commit()) { "下载任务没有成功写入本机队列，请重试" }\n        } else {\n            editor.apply()\n        }',
-              "commit new queue tasks")
+              '        val editor = context.getSharedPreferences(FILE, Context.MODE_PRIVATE).edit().putString(KEY, array.toString())\\n        if (persistImmediately) {\\n            check(editor.commit()) { "下载任务没有成功写入本机队列，请重试" }\\n        } else {\\n            editor.apply()\\n        }',
+              "commit new task synchronously")
 
-          old = """    fun add(context: Context, url: String, title: String, formatSelector: String, formatLabel: String): DownloadTask {
-              val task = DownloadTask(UUID.randomUUID().toString(), url, title, formatSelector, formatLabel)
-              val tasks = read(context)
-              tasks.add(0, task)
-              write(context, tasks.take(100))
-              return task
-          }
-          """
-          new = """    fun add(context: Context, url: String, title: String, formatSelector: String, formatLabel: String): DownloadTask {
-              val cleanUrl = url.trim()
-              val parsed = Uri.parse(cleanUrl)
-              require((parsed.scheme == "http" || parsed.scheme == "https") && !parsed.host.isNullOrBlank()) {
-                  "下载链接为空或不完整，请返回首页重新解析"
-              }
-              val task = DownloadTask(UUID.randomUUID().toString(), cleanUrl, title, formatSelector, formatLabel)
-              val tasks = read(context)
-              tasks.add(0, task)
-              val active = tasks.filterNot { it.status == "已完成" || it.status == "已取消" || it.status == "失败" }
-              val finished = tasks.filter { it.status == "已完成" || it.status == "已取消" || it.status == "失败" }.take(150)
-              write(context, active + finished, persistImmediately = true)
-              return task
-          }
-          """
-          s = replace_once(s, old, new, "validate and persist queue item")
+          old_add = "    fun add(context: Context, url: String, title: String, formatSelector: String, formatLabel: String): DownloadTask {\\n        val task = DownloadTask(UUID.randomUUID().toString(), url, title, formatSelector, formatLabel)\\n        val tasks = read(context)\\n        tasks.add(0, task)\\n        write(context, tasks.take(100))\\n        return task\\n    }"
+          new_add = "    fun add(context: Context, url: String, title: String, formatSelector: String, formatLabel: String): DownloadTask {\\n        val cleanUrl = url.trim()\\n        val parsed = Uri.parse(cleanUrl)\\n        require((parsed.scheme == \\"http\\" || parsed.scheme == \\"https\\") && !parsed.host.isNullOrBlank()) {\\n            \\"下载链接为空或不完整，请返回首页重新解析\\"\\n        }\\n        val task = DownloadTask(UUID.randomUUID().toString(), cleanUrl, title, formatSelector, formatLabel)\\n        val tasks = read(context)\\n        tasks.add(0, task)\\n        val active = tasks.filterNot { it.status == \\"已完成\\" || it.status == \\"已取消\\" || it.status == \\"失败\\" }\\n        val finished = tasks.filter { it.status == \\"已完成\\" || it.status == \\"已取消\\" || it.status == \\"失败\\" }.take(150)\\n        write(context, active + finished, persistImmediately = true)\\n        return task\\n    }"
+          s = replace_once(s, old_add, new_add, "validate and persist queue item")
           p.write_text(s)
           PY
 

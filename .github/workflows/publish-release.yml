@@ -24,46 +24,49 @@ jobs:
         run: |
           set -euo pipefail
           gh run download "$BUILD_RUN_ID" --repo "$GITHUB_REPOSITORY" --name DownKit-release-package --dir release-package
-          test -s release-package/DownKit-1.1.0-arm64.apk
-          test -s release-package/DownKit-Android-1.1.0-source.zip
+          test -s release-package/DownKit-1.1.1-arm64.apk
+          test -s release-package/DownKit-Android-1.1.1-source.zip
           test -s release-package/SHA256SUMS.txt
           (cd release-package && sha256sum --check SHA256SUMS.txt)
-          unzip -t release-package/DownKit-Android-1.1.0-source.zip >/dev/null
+          unzip -t release-package/DownKit-Android-1.1.1-source.zip >/dev/null
 
       - name: Publish stable GitHub Release
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
           set -euo pipefail
-          TAG="v1.1.0"
+          TAG="v1.1.1"
           NOTES="$(cat <<'EOF'
-          # DownKit 1.1.0
+          # DownKit 1.1.1
 
           Public ARM64 Android release.
 
           ## What's new
           - Keeps the current URL and parsed media details when switching between app tabs.
           - Reworks format selection into a compact two-column grid with an expand/collapse control.
-          - Reworks settings into compact two-column cards.
-          - Shows detailed parse, connection, download, merge and save stages instead of vague progress.
+          - Keeps the original single-page scrolling gesture: the format list no longer nests a second vertical scroller.
+          - Updates download cards in place; progress refreshes no longer rebuild the whole task page or interrupt dragging.
+          - Keeps the format picker in a compact two-column grid which expands within the page scroll.
+          - Preserves actual container extensions (MP4, WebM, MKV, M4A and others) instead of forcing MP4.
+          - Retries a format which disappeared from a site's live format list with yt-dlp's best compatible video/audio format, then best single-file.
           - Adds GitHub Releases update checking, APK download, SHA-256 verification and Android installer hand-off.
           - Uses a persistent release signing key. Once this first stable-signed release is installed, later releases signed with the same key can update in place.
 
           ## Downloads
-          - DownKit-1.1.0-arm64.apk — ARM64 Android installer.
-          - DownKit-Android-1.1.0-source.zip — complete public Android Studio source.
+          - DownKit-1.1.1-arm64.apk — ARM64 Android installer.
+          - DownKit-Android-1.1.1-source.zip — complete public Android Studio source.
           - SHA256SUMS.txt — package checksums.
 
           ## Upgrade note
-          Versions 1.0.x were temporary CI Debug-signed builds. Android may require one final uninstall before installing 1.1.0 with the fixed Release signing certificate. Subsequent releases using the same certificate support in-place upgrades. Android will still ask the user to approve installation.
+          Versions 1.0.x were temporary CI Debug-signed builds. Android may require one final uninstall before installing 1.1.1 with the fixed Release signing certificate. Subsequent releases using the same certificate support in-place upgrades. Android will still ask the user to approve installation.
 
           ## Compatibility
           yt-dlp supports many sites, but individual website changes, login, regional restrictions and anti-bot mechanisms can affect availability. DRM-protected streams are not supported.
           EOF
           )"
           if gh release view "$TAG" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
-            gh release upload "$TAG" release-package/DownKit-1.1.0-arm64.apk release-package/DownKit-Android-1.1.0-source.zip release-package/SHA256SUMS.txt --repo "$GITHUB_REPOSITORY" --clobber
+            gh release upload "$TAG" release-package/DownKit-1.1.1-arm64.apk release-package/DownKit-Android-1.1.1-source.zip release-package/SHA256SUMS.txt --repo "$GITHUB_REPOSITORY" --clobber
           else
-            gh release create "$TAG" release-package/DownKit-1.1.0-arm64.apk release-package/DownKit-Android-1.1.0-source.zip release-package/SHA256SUMS.txt --repo "$GITHUB_REPOSITORY" --title "DownKit 1.1.0" --notes "$NOTES"
+            gh release create "$TAG" release-package/DownKit-1.1.1-arm64.apk release-package/DownKit-Android-1.1.1-source.zip release-package/SHA256SUMS.txt --repo "$GITHUB_REPOSITORY" --title "DownKit 1.1.1" --notes "$NOTES"
           fi
           gh release view "$TAG" --repo "$GITHUB_REPOSITORY" --json url,name,isPrerelease,assets

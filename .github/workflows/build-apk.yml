@@ -6,7 +6,6 @@ on:
     paths:
       - "DownKit-Android-source.zip"
       - ".github/scripts/public-release-parts/**"
-      - ".github/workflows/build-apk.yml"
 
 permissions:
   contents: read

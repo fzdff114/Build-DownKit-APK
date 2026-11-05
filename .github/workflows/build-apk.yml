@@ -108,7 +108,7 @@ jobs:
           old_import = "from java import jarray, jclass, jstring"
           new_import = "from java import jclass"
           old_call = "                java_args = jarray(jstring)(arguments)" + chr(10) + '                jclass("com.downkit.android.FfmpegBridge").execute(java_args)'
-          new_call = 'jclass("com.downkit.android.FfmpegBridge").execute(arguments)'
+          new_call = '                jclass("com.downkit.android.FfmpegBridge").execute(arguments)'
           if old_import not in source or old_call not in source:
               raise SystemExit("Expected broken Chaquopy jstring bridge was not found; refusing an unsafe partial patch")
           source = source.replace(old_import, new_import, 1)
@@ -127,7 +127,7 @@ jobs:
           PY
           python3 -m py_compile app/src/main/python/bridge.py
           grep -n -A5 'run_ffmpeg_multiple_files' app/src/main/python/bridge.py
-          grep -n 'versionCode\\|versionName' app/build.gradle.kts
+          grep -n -E 'versionCode|versionName' app/build.gradle.kts
 
       - name: Build APKs
         working-directory: DownKit-Android

@@ -146,11 +146,11 @@ jobs:
           s = p.read_text()
           s = replace_once(s,
               "    private var parsedInfo: JSONObject? = null",
-              "    private var parsedInfo: JSONObject? = null\\n    private var parsedUrl: String? = null\\n    private var parseGeneration: Long = 0L",
+              "    private var parsedInfo: JSONObject? = null\n    private var parsedUrl: String? = null\n    private var parseGeneration: Long = 0L",
               "parsed URL fields")
           s = replace_once(s,
-              "    private fun renderHome() {\\n        currentTab = 1",
-              "    private fun renderHome() {\\n        currentTab = 1\\n        parseGeneration += 1\\n        parsedInfo = null\\n        parsedUrl = null\\n        formats = emptyList()",
+              "    private fun renderHome() {\n        currentTab = 1",
+              "    private fun renderHome() {\n        currentTab = 1\n        parseGeneration += 1\n        parsedInfo = null\n        parsedUrl = null\n        formats = emptyList()",
               "home view reset")
 
           old = """        urlField = TextInputEditText(this).apply {
@@ -219,8 +219,8 @@ jobs:
           """
           s = replace_once(s, old, new, "ignore stale parse response")
           s = replace_once(s,
-              "                parsedInfo = result\\n                val views = infoCard?.tag as? HomeViews",
-              "                parsedInfo = result\\n                parsedUrl = url\\n                val views = infoCard?.tag as? HomeViews",
+              "                parsedInfo = result\n                val views = infoCard?.tag as? HomeViews",
+              "                parsedInfo = result\n                parsedUrl = url\n                val views = infoCard?.tag as? HomeViews",
               "persist inspected URL snapshot")
 
           old = """    private fun startDownload() {
@@ -255,20 +255,20 @@ jobs:
           s = replace_once(s, old, new, "queue the parsed URL, not editable text")
           s = replace_once(s,
               '            body.addView(text(task.title, 15, true, Color.rgb(23, 32, 51)).apply { maxLines = 2 }, margin(bottom = 5))',
-              '            body.addView(text(task.title, 15, true, Color.rgb(23, 32, 51)).apply { maxLines = 2 }, margin(bottom = 4))\\n            body.addView(text(task.url, 11, false, Color.rgb(122, 132, 150)).apply { maxLines = 1; ellipsize = android.text.TextUtils.TruncateAt.END }, margin(bottom = 7))',
+              '            body.addView(text(task.title, 15, true, Color.rgb(23, 32, 51)).apply { maxLines = 2 }, margin(bottom = 4))\n            body.addView(text(task.url, 11, false, Color.rgb(122, 132, 150)).apply { maxLines = 1; ellipsize = android.text.TextUtils.TruncateAt.END }, margin(bottom = 7))',
               "display stored task URL")
           p.write_text(s)
 
           p = Path("app/src/main/java/com/downkit/android/DownloadTaskStore.kt")
           s = p.read_text()
-          s = replace_once(s, "import android.content.Context", "import android.content.Context\\nimport android.net.Uri", "Uri import")
+          s = replace_once(s, "import android.content.Context", "import android.content.Context\nimport android.net.Uri", "Uri import")
           s = replace_once(s,
               "    private fun write(context: Context, tasks: List<DownloadTask>) {",
               "    private fun write(context: Context, tasks: List<DownloadTask>, persistImmediately: Boolean = false) {",
               "durable write mode")
           s = replace_once(s,
               '        context.getSharedPreferences(FILE, Context.MODE_PRIVATE).edit().putString(KEY, array.toString()).apply()',
-              '        val editor = context.getSharedPreferences(FILE, Context.MODE_PRIVATE).edit().putString(KEY, array.toString())\\n        if (persistImmediately) {\\n            check(editor.commit()) { "下载任务没有成功写入本机队列，请重试" }\\n        } else {\\n            editor.apply()\\n        }',
+              '        val editor = context.getSharedPreferences(FILE, Context.MODE_PRIVATE).edit().putString(KEY, array.toString())\n        if (persistImmediately) {\n            check(editor.commit()) { "下载任务没有成功写入本机队列，请重试" }\n        } else {\n            editor.apply()\n        }',
               "commit new queue tasks")
 
           old = """    fun add(context: Context, url: String, title: String, formatSelector: String, formatLabel: String): DownloadTask {

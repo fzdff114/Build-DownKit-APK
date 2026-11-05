@@ -53,6 +53,9 @@ jobs:
           nl = chr(10)
           p = Path("app/build.gradle.kts")
           s = p.read_text()
+          s = s.replace('abiFilters += listOf("arm64-v8a", "x86_64")', 'abiFilters += listOf("arm64-v8a")', 1)
+          if 'abiFilters += listOf("arm64-v8a")' not in s:
+              raise SystemExit("ARM64 ABI filter not found")
           old = nl.join(["    kotlinOptions {", '        jvmTarget = "17"', "    }"])
           if old in s:
               s = s.replace(old, "", 1)

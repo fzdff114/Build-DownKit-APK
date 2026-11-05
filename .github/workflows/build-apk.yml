@@ -53,11 +53,10 @@ jobs:
           p = Path("app/build.gradle.kts")
           s = p.read_text()
           old = '    kotlinOptions {\n        jvmTarget = "17"\n    }'
-          new = '    kotlin {\n        compilerOptions {\n            jvmTarget.set(org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_17)\n        }\n    }'
-          if old in s:
-              s = s.replace(old, new, 1)
-          elif new not in s:
-              raise SystemExit("Could not locate Kotlin jvmTarget block to migrate")
+          new = ''
+          s = s.replace(old, new, 1)
+          if 'kotlin {\\n    compilerOptions {' not in s:
+              s += '\\nkotlin {\\n    compilerOptions {\\n        jvmTarget.set(org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_17)\\n    }\\n}\\n'
           p.write_text(s)
           w = Path("gradle/wrapper/gradle-wrapper.properties")
           t = w.read_text()

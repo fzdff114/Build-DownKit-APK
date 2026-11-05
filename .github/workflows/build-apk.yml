@@ -43,6 +43,30 @@ jobs:
           test -f DownKit-Android/gradlew
           test -f DownKit-Android/settings.gradle.kts
 
+      - name: Patch Kotlin and Gradle compatibility
+        working-directory: DownKit-Android
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+          p = Path("app/build.gradle.kts")
+          s = p.read_text()
+          old = '    kotlinOptions {\n        jvmTarget = "17"\n    }'
+          new = '    kotlin {\n        compilerOptions {\n            jvmTarget.set(org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_17)\n        }\n    }'
+          if old in s:
+              s = s.replace(old, new, 1)
+          elif new not in s:
+              raise SystemExit("Could not locate Kotlin jvmTarget block to migrate")
+          p.write_text(s)
+          w = Path("gradle/wrapper/gradle-wrapper.properties")
+          t = w.read_text()
+          t = t.replace("gradle-8.13-bin.zip", "gradle-8.14.4-bin.zip")
+          w.write_text(t)
+          PY
+          grep -n -A4 'compilerOptions' app/build.gradle.kts
+          grep distributionUrl gradle/wrapper/gradle-wrapper.properties
+
       - name: Build APKs
         working-directory: DownKit-Android
         run: |

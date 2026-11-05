@@ -5,7 +5,6 @@ on:
   push:
     paths:
       - "DownKit-Android-source.zip"
-      - ".github/scripts/public-release-parts/**"
 
 permissions:
   contents: read
@@ -83,7 +82,8 @@ jobs:
           mkdir -p "$RUNNER_TEMP/downkit-patch"
           cat .github/scripts/public-release-parts/part*.b64 | tr -d '\r\n ' | base64 -d > "$RUNNER_TEMP/downkit-patch/prepare.gz"
           ACTUAL="$(wc -c < "$RUNNER_TEMP/downkit-patch/prepare.gz" | tr -d ' ')"
-          test "$ACTUAL" = "16344"
+          test "$ACTUAL" = "18369"
+          gzip -t "$RUNNER_TEMP/downkit-patch/prepare.gz"
           gzip -dc "$RUNNER_TEMP/downkit-patch/prepare.gz" > "$RUNNER_TEMP/downkit-patch/prepare_public_release.py"
           python3 -m py_compile "$RUNNER_TEMP/downkit-patch/prepare_public_release.py"
           python3 "$RUNNER_TEMP/downkit-patch/prepare_public_release.py" DownKit-Android

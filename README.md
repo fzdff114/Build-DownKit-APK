@@ -29,7 +29,7 @@ DownKit 是面向 Android 用户的开源媒体下载工具，使用 [yt-dlp](ht
 
 从 [Releases](https://github.com/fzdff114/Build-DownKit-APK/releases) 下载 APK。应用内「设置 → 应用更新」可检查 GitHub 上的最新发行版，下载后会验证 SHA-256（发行版提供时）并打开 Android 安装程序。Android 仍会要求用户确认安装；普通应用不能静默替换自身。
 
-**签名说明：** 1.0.x 是临时 CI Debug 签名。首次切换到固定 Release 签名的 1.1.1 时，Android 可能要求先卸载旧版；1.1.1 之后使用同一私钥签名的版本即可原位更新。请勿清除或丢失 Release 签名密钥。
+**签名说明：** 1.0.x 是临时 CI Debug 签名。首次切换到固定 Release 签名的 1.1.0 时，Android 可能要求先卸载旧版；1.1.0 及之后使用同一私钥签名的版本均可原位更新。请勿清除或丢失 Release 签名密钥。
 
 ## 从源码构建
 

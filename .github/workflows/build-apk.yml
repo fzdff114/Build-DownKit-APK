@@ -7,6 +7,7 @@ on:
       - "DownKit-Android-source.zip"
       - ".github/scripts/public-release-parts/**"
       - ".github/scripts/patch_reliability.py.gz.b64"
+      - ".github/scripts/patch_proxy_animation.py"
       - ".github/workflows/build-apk.yml"
 
 permissions:
@@ -105,6 +106,18 @@ jobs:
           grep -q 'versionName = "1.1.1"' DownKit-Android/app/build.gradle.kts
           grep -q 'private fun refreshTaskCards()' DownKit-Android/app/src/main/java/com/downkit/android/MainActivity.kt
           ! grep -q 'formatScroll = ScrollView(this)' DownKit-Android/app/src/main/java/com/downkit/android/MainActivity.kt
+
+      - name: Fix proxy field, shorten app name and add subtle animations
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 -m py_compile .github/scripts/patch_proxy_animation.py
+          python3 .github/scripts/patch_proxy_animation.py DownKit-Android
+          python3 -m py_compile DownKit-Android/app/src/main/python/bridge.py
+          grep -q '<string name="app_name">DownKit</string>' DownKit-Android/app/src/main/res/values/strings.xml
+          grep -q 'setHintEnabled(false)' DownKit-Android/app/src/main/java/com/downkit/android/MainActivity.kt
+          grep -q 'versionName = "1.1.1"' DownKit-Android/app/build.gradle.kts
+          grep -q 'versionCode = 5' DownKit-Android/app/build.gradle.kts
 
       - name: Compile-check the Android application
         working-directory: DownKit-Android

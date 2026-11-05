@@ -6,6 +6,7 @@ on:
     paths:
       - "DownKit-Android-source.zip"
       - ".github/scripts/public-release-parts/**"
+      - ".github/scripts/patch_reliability.py.gz.b64"
 
 permissions:
   contents: read
@@ -76,7 +77,7 @@ jobs:
           w.write_text(w.read_text().replace("gradle-8.13-bin.zip", "gradle-8.14.4-bin.zip"))
           PY
 
-      - name: Assemble public DownKit 1.1.0 source changes
+      - name: Assemble public DownKit 1.1.1 source changes
         shell: bash
         run: |
           set -euo pipefail
@@ -150,7 +151,7 @@ jobs:
           mkdir -p release-package
           cp DownKit-Android/app/build/outputs/apk/release/app-release.apk release-package/DownKit-1.1.1-arm64.apk
           (cd DownKit-Android && zip -qr "$GITHUB_WORKSPACE/release-package/DownKit-Android-1.1.1-source.zip" . -x '*/build/*' '.gradle/*' 'local.properties')
-          (cd release-package && sha256sum DownKit-1.1.0-arm64.apk DownKit-Android-1.1.0-source.zip > SHA256SUMS.txt)
+          (cd release-package && sha256sum DownKit-1.1.1-arm64.apk DownKit-Android-1.1.1-source.zip > SHA256SUMS.txt)
           ls -lh release-package/
 
       - name: Upload signed release package

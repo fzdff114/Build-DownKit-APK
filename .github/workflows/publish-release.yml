@@ -34,24 +34,24 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           set -euo pipefail
-          TAG="v1.0.1"
+          TAG="v1.0.2"
           NOTES="$(cat <<'EOF'
-          ## DownKit Android 1.0.1 — ARM64 Debug
+          ## DownKit Android 1.0.2 — ARM64 Debug
 
-          - Fixes FFmpeg merge failure caused by an invalid Chaquopy jstring import.
-          - Uses Chaquopy's supported automatic conversion from Python sequences to Java String arrays.
-          - Android APK for ARM64 (arm64-v8a) devices.
-          - Built from yt-dlp 2026.10.26 with embedded Python 3.13.
-          - Debug-signed test release; not a production/release-signed build.
+          - Fixes queued-task URL loss: every task now keeps the exact URL used for its successful metadata parse.
+          - Editing or replacing a URL invalidates stale metadata, preventing one video's title/formats from being paired with another or a blank URL.
+          - Queue additions are validated and synchronously persisted before the download service starts.
+          - Waiting/running tasks are no longer silently dropped by the old 100-task truncation.
+          - Task cards show the stored source URL for verification.
+          - Bilibili extractor and title/thumbnail metadata flow are preserved.
 
-          Install app-debug.apk on an ARM64 Android device. Android may ask you to allow installation from this source.
-
+          ARM64 (arm64-v8a) Android APK. Debug-signed test release, not a production/release-signed build.
           See SHA256SUMS.txt to verify the APK download.
           EOF
           )"
           if gh release view "$TAG" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
             gh release upload "$TAG" release-files/app-debug.apk release-files/SHA256SUMS.txt --repo "$GITHUB_REPOSITORY" --clobber
           else
-            gh release create "$TAG" release-files/app-debug.apk release-files/SHA256SUMS.txt --repo "$GITHUB_REPOSITORY" --title "DownKit 1.0.1 (ARM64 Debug)" --notes "$NOTES" --prerelease
+            gh release create "$TAG" release-files/app-debug.apk release-files/SHA256SUMS.txt --repo "$GITHUB_REPOSITORY" --title "DownKit 1.0.2 (ARM64 Debug)" --notes "$NOTES" --prerelease
           fi
           gh release view "$TAG" --repo "$GITHUB_REPOSITORY" --json url,name,isPrerelease,assets

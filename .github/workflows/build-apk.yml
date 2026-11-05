@@ -95,6 +95,40 @@ jobs:
           grep -n -A4 'compilerOptions' app/build.gradle.kts
           grep distributionUrl gradle/wrapper/gradle-wrapper.properties
 
+      - name: Fix Chaquopy FFmpeg Java array bridge
+        working-directory: DownKit-Android
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+
+          bridge = Path("app/src/main/python/bridge.py")
+          source = bridge.read_text()
+          old_import = "from java import jarray, jclass, jstring"
+          new_import = "from java import jclass"
+          old_call = 'java_args = jarray(jstring)(arguments)\\n                jclass("com.downkit.android.FfmpegBridge").execute(java_args)'
+          new_call = 'jclass("com.downkit.android.FfmpegBridge").execute(arguments)'
+          if old_import not in source or old_call not in source:
+              raise SystemExit("Expected broken Chaquopy jstring bridge was not found; refusing an unsafe partial patch")
+          source = source.replace(old_import, new_import, 1)
+          source = source.replace(old_call, new_call, 1)
+          if "jstring" in source or "jarray(" in source:
+              raise SystemExit("Obsolete Java string-array helper remains in bridge.py")
+          bridge.write_text(source)
+
+          gradle = Path("app/build.gradle.kts")
+          config = gradle.read_text()
+          if 'versionCode = 1' not in config or 'versionName = "1.0.0"' not in config:
+              raise SystemExit("Unexpected app version; refusing to overwrite")
+          config = config.replace("versionCode = 1", "versionCode = 2", 1)
+          config = config.replace('versionName = "1.0.0"', 'versionName = "1.0.1"', 1)
+          gradle.write_text(config)
+          PY
+          python3 -m py_compile app/src/main/python/bridge.py
+          grep -n -A5 'run_ffmpeg_multiple_files' app/src/main/python/bridge.py
+          grep -n 'versionCode\\|versionName' app/build.gradle.kts
+
       - name: Build APKs
         working-directory: DownKit-Android
         run: |

@@ -56,16 +56,14 @@ jobs:
           s = s.replace(old, '', 1)
           if 'kotlin {\\n    compilerOptions {' not in s:
               s += '\\nkotlin {\\n    compilerOptions {\\n        jvmTarget.set(org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_17)\\n    }\\n}\\n'
-          abi_splits = '''    splits {
-              abi {
-                  isEnable = true
-                  reset()
-                  include("arm64-v8a", "x86_64")
-                  isUniversalApk = false
-              }
-          }
-          '''
-          s = s.replace(abi_splits, '', 1)
+          lines = s.splitlines()
+          if "    splits {" in lines:
+              start = lines.index("    splits {")
+              end = next((i for i in range(start + 1, len(lines)) if lines[i] == "    }"), None)
+              if end is None:
+                  raise SystemExit("Malformed ABI splits block")
+              del lines[start:end + 1]
+          s = "\\n".join(lines) + "\\n"
           p.write_text(s)
           w = Path("gradle/wrapper/gradle-wrapper.properties")
           t = w.read_text()

@@ -1,0 +1,30 @@
+name: Inspect DownKit Source
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - ".github/workflows/inspect-source.yml"
+
+permissions:
+  contents: read
+  actions: write
+
+jobs:
+  inspect:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Extract source
+        run: |
+          set -euo pipefail
+          test -s DownKit-Android-source.zip
+          unzip -oq DownKit-Android-source.zip -d .
+          test -f DownKit-Android/app/src/main/java/com/downkit/android/MainActivity.kt
+      - name: Upload extracted source
+        uses: actions/upload-artifact@v4
+        with:
+          name: DownKit-source-inspection
+          path: DownKit-Android/
+          if-no-files-found: error
+          retention-days: 1

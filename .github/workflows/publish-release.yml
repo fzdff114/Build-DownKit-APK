@@ -17,41 +17,53 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Download APK from the successful build
+      - name: Download signed package from successful build
         env:
           GH_TOKEN: ${{ github.token }}
           BUILD_RUN_ID: ${{ github.event.workflow_run.id }}
         run: |
           set -euo pipefail
-          gh run download "$BUILD_RUN_ID" --repo "$GITHUB_REPOSITORY" --name DownKit-debug-apks --dir release-files
-          test -s release-files/app-debug.apk
-          unzip -t release-files/app-debug.apk >/dev/null
-          sha256sum release-files/app-debug.apk | tee release-files/SHA256SUMS.txt
-          ls -lh release-files/
+          gh run download "$BUILD_RUN_ID" --repo "$GITHUB_REPOSITORY" --name DownKit-release-package --dir release-package
+          test -s release-package/DownKit-1.1.0-arm64.apk
+          test -s release-package/DownKit-Android-1.1.0-source.zip
+          test -s release-package/SHA256SUMS.txt
+          (cd release-package && sha256sum --check SHA256SUMS.txt)
+          unzip -t release-package/DownKit-Android-1.1.0-source.zip >/dev/null
 
-      - name: Publish GitHub Release
+      - name: Publish stable GitHub Release
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
           set -euo pipefail
-          TAG="v1.0.2"
+          TAG="v1.1.0"
           NOTES="$(cat <<'EOF'
-          ## DownKit Android 1.0.2 — ARM64 Debug
+          # DownKit 1.1.0
 
-          - Fixes queued-task URL loss: every task now keeps the exact URL used for its successful metadata parse.
-          - Editing or replacing a URL invalidates stale metadata, preventing one video's title/formats from being paired with another or a blank URL.
-          - Queue additions are validated and synchronously persisted before the download service starts.
-          - Waiting/running tasks are no longer silently dropped by the old 100-task truncation.
-          - Task cards show the stored source URL for verification.
-          - Bilibili extractor and title/thumbnail metadata flow are preserved.
+          Public ARM64 Android release.
 
-          ARM64 (arm64-v8a) Android APK. Debug-signed test release, not a production/release-signed build.
-          See SHA256SUMS.txt to verify the APK download.
+          ## What's new
+          - Keeps the current URL and parsed media details when switching between app tabs.
+          - Reworks format selection into a compact two-column grid with an expand/collapse control.
+          - Reworks settings into compact two-column cards.
+          - Shows detailed parse, connection, download, merge and save stages instead of vague progress.
+          - Adds GitHub Releases update checking, APK download, SHA-256 verification and Android installer hand-off.
+          - Uses a persistent release signing key. Once this first stable-signed release is installed, later releases signed with the same key can update in place.
+
+          ## Downloads
+          - DownKit-1.1.0-arm64.apk — ARM64 Android installer.
+          - DownKit-Android-1.1.0-source.zip — complete public Android Studio source.
+          - SHA256SUMS.txt — package checksums.
+
+          ## Upgrade note
+          Versions 1.0.x were temporary CI Debug-signed builds. Android may require one final uninstall before installing 1.1.0 with the fixed Release signing certificate. Subsequent releases using the same certificate support in-place upgrades. Android will still ask the user to approve installation.
+
+          ## Compatibility
+          yt-dlp supports many sites, but individual website changes, login, regional restrictions and anti-bot mechanisms can affect availability. DRM-protected streams are not supported.
           EOF
           )"
           if gh release view "$TAG" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
-            gh release upload "$TAG" release-files/app-debug.apk release-files/SHA256SUMS.txt --repo "$GITHUB_REPOSITORY" --clobber
+            gh release upload "$TAG" release-package/DownKit-1.1.0-arm64.apk release-package/DownKit-Android-1.1.0-source.zip release-package/SHA256SUMS.txt --repo "$GITHUB_REPOSITORY" --clobber
           else
-            gh release create "$TAG" release-files/app-debug.apk release-files/SHA256SUMS.txt --repo "$GITHUB_REPOSITORY" --title "DownKit 1.0.2 (ARM64 Debug)" --notes "$NOTES" --prerelease
+            gh release create "$TAG" release-package/DownKit-1.1.0-arm64.apk release-package/DownKit-Android-1.1.0-source.zip release-package/SHA256SUMS.txt --repo "$GITHUB_REPOSITORY" --title "DownKit 1.1.0" --notes "$NOTES"
           fi
           gh release view "$TAG" --repo "$GITHUB_REPOSITORY" --json url,name,isPrerelease,assets

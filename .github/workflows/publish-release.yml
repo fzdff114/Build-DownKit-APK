@@ -1,10 +1,9 @@
 name: Publish DownKit APK Release
 
 on:
-  workflow_dispatch:
-  push:
-    paths:
-      - ".github/workflows/publish-release.yml"
+  workflow_run:
+    workflows: ["Build DownKit APK"]
+    types: [completed]
 
 permissions:
   actions: read
@@ -12,17 +11,19 @@ permissions:
 
 jobs:
   publish:
+    if: ${{ github.event.workflow_run.conclusion == 'success' }}
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Download verified build artifact
+      - name: Download APK from the successful build
         env:
           GH_TOKEN: ${{ github.token }}
+          BUILD_RUN_ID: ${{ github.event.workflow_run.id }}
         run: |
           set -euo pipefail
-          gh run download 41967690498 --repo "$GITHUB_REPOSITORY" --name DownKit-debug-apks --dir release-files
+          gh run download "$BUILD_RUN_ID" --repo "$GITHUB_REPOSITORY" --name DownKit-debug-apks --dir release-files
           test -s release-files/app-debug.apk
           unzip -t release-files/app-debug.apk >/dev/null
           sha256sum release-files/app-debug.apk | tee release-files/SHA256SUMS.txt
@@ -33,14 +34,15 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           set -euo pipefail
-          TAG="v1.0.0"
+          TAG="v1.0.1"
           NOTES="$(cat <<'EOF'
-          ## DownKit Android 1.0.0 — ARM64 Debug
+          ## DownKit Android 1.0.1 — ARM64 Debug
 
+          - Fixes FFmpeg merge failure caused by an invalid Chaquopy jstring import.
+          - Uses Chaquopy's supported automatic conversion from Python sequences to Java String arrays.
           - Android APK for ARM64 (arm64-v8a) devices.
-          - Built from the DownKit Android project using yt-dlp 2026.10.26.
-          - Includes embedded Python 3.13 and FFmpeg native libraries.
-          - This is a debug-signed test release, not a production/release-signed build.
+          - Built from yt-dlp 2026.10.26 with embedded Python 3.13.
+          - Debug-signed test release; not a production/release-signed build.
 
           Install app-debug.apk on an ARM64 Android device. Android may ask you to allow installation from this source.
 
@@ -50,6 +52,6 @@ jobs:
           if gh release view "$TAG" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
             gh release upload "$TAG" release-files/app-debug.apk release-files/SHA256SUMS.txt --repo "$GITHUB_REPOSITORY" --clobber
           else
-            gh release create "$TAG" release-files/app-debug.apk release-files/SHA256SUMS.txt --repo "$GITHUB_REPOSITORY" --title "DownKit 1.0.0 (ARM64 Debug)" --notes "$NOTES" --prerelease
+            gh release create "$TAG" release-files/app-debug.apk release-files/SHA256SUMS.txt --repo "$GITHUB_REPOSITORY" --title "DownKit 1.0.1 (ARM64 Debug)" --notes "$NOTES" --prerelease
           fi
           gh release view "$TAG" --repo "$GITHUB_REPOSITORY" --json url,name,isPrerelease,assets

@@ -91,6 +91,12 @@ jobs:
           grep -q 'versionName = "1.1.0"' DownKit-Android/app/build.gradle.kts
           grep -q 'REQUEST_INSTALL_PACKAGES' DownKit-Android/app/src/main/AndroidManifest.xml
 
+      - name: Compile-check the Android application
+        working-directory: DownKit-Android
+        run: |
+          chmod +x ./gradlew
+          ./gradlew --no-daemon --stacktrace assembleDebug
+
       - name: Configure persistent release signing
         env:
           KEYSTORE_B64: ${{ secrets.DOWNKIT_KEYSTORE_BASE64 }}

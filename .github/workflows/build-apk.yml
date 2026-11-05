@@ -5,6 +5,7 @@ on:
   push:
     paths:
       - "DownKit-Android-source.zip"
+      - ".github/scripts/public-release-parts/**"
       - ".github/workflows/build-apk.yml"
 
 permissions:
@@ -28,127 +29,116 @@ jobs:
         with:
           python-version: "3.13"
 
-      - name: Verify build Python
-        run: python3.13 --version
-
       - name: Install Android SDK components
         shell: bash
         run: |
           set -eu
           set +o pipefail
           SDKMANAGER="$(find "${ANDROID_HOME:-/usr/local/lib/android/sdk}/cmdline-tools" -type f -name sdkmanager | sort -V | tail -n 1)"
-          if [[ -z "$SDKMANAGER" ]]; then
-            echo "sdkmanager not found in Android SDK installation"
-            exit 1
-          fi
+          test -n "$SDKMANAGER"
           yes | "$SDKMANAGER" --licenses
           "$SDKMANAGER" --install "platforms;android-36" "build-tools;36.0.0" "ndk;27.2.12479018" "cmake;3.22.1"
 
-      - name: Extract DownKit project
+      - name: Extract original project
         run: |
-          test -f DownKit-Android-source.zip
+          test -s DownKit-Android-source.zip
           unzip -oq DownKit-Android-source.zip -d .
           test -f DownKit-Android/gradlew
-          test -f DownKit-Android/settings.gradle.kts
+          test -f DownKit-Android/app/src/main/java/com/downkit/android/MainActivity.kt
 
-      - name: Patch Kotlin and ABI compatibility
+      - name: Prepare ARM64 Kotlin and Gradle configuration
         working-directory: DownKit-Android
         shell: bash
         run: |
           set -euo pipefail
           python3 - <<'PY'
           from pathlib import Path
-          nl = chr(10)
           p = Path("app/build.gradle.kts")
           s = p.read_text()
           s = s.replace('abiFilters += listOf("arm64-v8a", "x86_64")', 'abiFilters += listOf("arm64-v8a")', 1)
           if 'abiFilters += listOf("arm64-v8a")' not in s:
-              raise SystemExit("ARM64 ABI filter not found")
-          old = nl.join(["    kotlinOptions {", '        jvmTarget = "17"', "    }"])
-          if old in s:
-              s = s.replace(old, "", 1)
-          if "compilerOptions {" not in s:
-              s += nl.join([
-                  "",
-                  "kotlin {",
-                  "    compilerOptions {",
-                  "        jvmTarget.set(org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_17)",
-                  "    }",
-                  "}",
-                  ""
-              ])
+              raise SystemExit("ARM64 ABI filter is missing")
           lines = s.splitlines()
           if "    splits {" in lines:
               start = lines.index("    splits {")
               end = next((i for i in range(start + 1, len(lines)) if lines[i] == "    }"), None)
               if end is None:
-                  raise SystemExit("Malformed ABI splits block")
+                  raise SystemExit("Malformed ABI split block")
               del lines[start:end + 1]
-          s = nl.join(lines) + nl
+          s = "\n".join(lines) + "\n"
+          old = "\n".join(["    kotlinOptions {", '        jvmTarget = "17"', "    }"])
+          s = s.replace(old, "", 1)
+          if "compilerOptions {" not in s:
+              s += "\n".join(["", "kotlin {", "    compilerOptions {", "        jvmTarget.set(org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_17)", "    }", "}", ""])
           if "splits {" in s:
               raise SystemExit("ABI split block was not removed")
           p.write_text(s)
           w = Path("gradle/wrapper/gradle-wrapper.properties")
-          t = w.read_text().replace("gradle-8.13-bin.zip", "gradle-8.14.4-bin.zip")
-          w.write_text(t)
+          w.write_text(w.read_text().replace("gradle-8.13-bin.zip", "gradle-8.14.4-bin.zip"))
           PY
-          grep -n -A4 'compilerOptions' app/build.gradle.kts
-          grep distributionUrl gradle/wrapper/gradle-wrapper.properties
 
-      - name: Fix Chaquopy FFmpeg Java array bridge
-        working-directory: DownKit-Android
+      - name: Assemble public DownKit 1.1.0 source changes
         shell: bash
         run: |
           set -euo pipefail
-          python3 - <<'PY'
-          from pathlib import Path
+          mkdir -p "$RUNNER_TEMP/downkit-patch"
+          cat .github/scripts/public-release-parts/part*.b64 | tr -d '\r\n ' | base64 -d > "$RUNNER_TEMP/downkit-patch/prepare.gz"
+          ACTUAL="$(wc -c < "$RUNNER_TEMP/downkit-patch/prepare.gz" | tr -d ' ')"
+          test "$ACTUAL" = "16344"
+          gzip -dc "$RUNNER_TEMP/downkit-patch/prepare.gz" > "$RUNNER_TEMP/downkit-patch/prepare_public_release.py"
+          python3 -m py_compile "$RUNNER_TEMP/downkit-patch/prepare_public_release.py"
+          python3 "$RUNNER_TEMP/downkit-patch/prepare_public_release.py" DownKit-Android
+          python3 -m py_compile DownKit-Android/app/src/main/python/bridge.py
+          grep -q 'versionName = "1.1.0"' DownKit-Android/app/build.gradle.kts
+          grep -q 'REQUEST_INSTALL_PACKAGES' DownKit-Android/app/src/main/AndroidManifest.xml
 
-          bridge = Path("app/src/main/python/bridge.py")
-          source = bridge.read_text()
-          old_import = "from java import jarray, jclass, jstring"
-          new_import = "from java import jclass"
-          old_call = "                java_args = jarray(jstring)(arguments)" + chr(10) + '                jclass("com.downkit.android.FfmpegBridge").execute(java_args)'
-          new_call = '                jclass("com.downkit.android.FfmpegBridge").execute(arguments)'
-          if old_import not in source or old_call not in source:
-              raise SystemExit("Expected broken Chaquopy jstring bridge was not found; refusing an unsafe partial patch")
-          source = source.replace(old_import, new_import, 1)
-          source = source.replace(old_call, new_call, 1)
-          if "jstring" in source or "jarray(" in source:
-              raise SystemExit("Obsolete Java string-array helper remains in bridge.py")
-          bridge.write_text(source)
-
-          gradle = Path("app/build.gradle.kts")
-          config = gradle.read_text()
-          if 'versionCode = 1' not in config or 'versionName = "1.0.0"' not in config:
-              raise SystemExit("Unexpected app version; refusing to overwrite")
-          config = config.replace("versionCode = 1", "versionCode = 2", 1)
-          config = config.replace('versionName = "1.0.0"', 'versionName = "1.0.1"', 1)
-          gradle.write_text(config)
-          PY
-          python3 -m py_compile app/src/main/python/bridge.py
-          grep -n -A5 'run_ffmpeg_multiple_files' app/src/main/python/bridge.py
-          grep -n -E 'versionCode|versionName' app/build.gradle.kts
-
-      - name: Fix parsed URL snapshot and durable multi-task queue
+      - name: Configure persistent release signing
+        env:
+          KEYSTORE_B64: ${{ secrets.DOWNKIT_KEYSTORE_BASE64 }}
+          STORE_PASSWORD: ${{ secrets.DOWNKIT_STORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.DOWNKIT_KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.DOWNKIT_KEY_PASSWORD }}
         shell: bash
         run: |
           set -euo pipefail
-          python3 -m py_compile .github/scripts/fix_queue.py
-          python3 .github/scripts/fix_queue.py DownKit-Android
-          grep -n -E 'parsedUrl|requestGeneration|task.url' DownKit-Android/app/src/main/java/com/downkit/android/MainActivity.kt
-          grep -n -E 'persistImmediately|cleanUrl|editor.commit' DownKit-Android/app/src/main/java/com/downkit/android/DownloadTaskStore.kt
-          grep -n -E 'versionCode|versionName' DownKit-Android/app/build.gradle.kts
+          test -n "$KEYSTORE_B64" || { echo "Missing repository secret DOWNKIT_KEYSTORE_BASE64"; exit 1; }
+          test -n "$STORE_PASSWORD" || { echo "Missing repository secret DOWNKIT_STORE_PASSWORD"; exit 1; }
+          test -n "$KEY_ALIAS" || { echo "Missing repository secret DOWNKIT_KEY_ALIAS"; exit 1; }
+          test -n "$KEY_PASSWORD" || { echo "Missing repository secret DOWNKIT_KEY_PASSWORD"; exit 1; }
+          KEYSTORE_PATH="$RUNNER_TEMP/downkit-release.jks"
+          printf '%s' "$KEYSTORE_B64" | base64 --decode > "$KEYSTORE_PATH"
+          test -s "$KEYSTORE_PATH"
+          chmod 600 "$KEYSTORE_PATH"
+          {
+            echo "DOWNKIT_KEYSTORE_PATH=$KEYSTORE_PATH"
+            echo "DOWNKIT_STORE_PASSWORD=$STORE_PASSWORD"
+            echo "DOWNKIT_KEY_ALIAS=$KEY_ALIAS"
+            echo "DOWNKIT_KEY_PASSWORD=$KEY_PASSWORD"
+          } >> "$GITHUB_ENV"
 
-      - name: Build APKs
+      - name: Build signed ARM64 release APK
         working-directory: DownKit-Android
         run: |
           chmod +x ./gradlew
-          ./gradlew --no-daemon --stacktrace assembleDebug
+          ./gradlew --no-daemon --stacktrace assembleRelease
+          APK="app/build/outputs/apk/release/app-release.apk"
+          test -s "$APK"
+          "$ANDROID_HOME/build-tools/36.0.0/apksigner" verify --verbose --print-certs "$APK"
 
-      - name: Upload APK artifacts
+      - name: Package APK and public source archive
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p release-package
+          cp DownKit-Android/app/build/outputs/apk/release/app-release.apk release-package/DownKit-1.1.0-arm64.apk
+          (cd DownKit-Android && zip -qr "$GITHUB_WORKSPACE/release-package/DownKit-Android-1.1.0-source.zip" . -x '*/build/*' '.gradle/*' 'local.properties')
+          (cd release-package && sha256sum DownKit-1.1.0-arm64.apk DownKit-Android-1.1.0-source.zip > SHA256SUMS.txt)
+          ls -lh release-package/
+
+      - name: Upload signed release package
         uses: actions/upload-artifact@v4
         with:
-          name: DownKit-debug-apks
-          path: DownKit-Android/app/build/outputs/apk/debug/*.apk
+          name: DownKit-release-package
+          path: release-package/*
           if-no-files-found: error
-          retention-days: 14
+          retention-days: 30

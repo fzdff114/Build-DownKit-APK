@@ -44,6 +44,9 @@ jobs:
           ## What's new
           - Keeps the current URL and parsed media details when switching between app tabs.
           - Reworks format selection into a compact two-column grid with an expand/collapse control.
+          - Fixes the proxy address field so the label and hint no longer overlap on narrow screens.
+          - Shortens the launcher name to "DownKit".
+          - Adds subtle page-switch, parsing and active-download animations.
           - Keeps the original single-page scrolling gesture: the format list no longer nests a second vertical scroller.
           - Updates download cards in place; progress refreshes no longer rebuild the whole task page or interrupt dragging.
           - Keeps the format picker in a compact two-column grid which expands within the page scroll.
@@ -69,4 +72,5 @@ jobs:
           else
             gh release create "$TAG" release-package/DownKit-1.1.1-arm64.apk release-package/DownKit-Android-1.1.1-source.zip release-package/SHA256SUMS.txt --repo "$GITHUB_REPOSITORY" --title "DownKit 1.1.1" --notes "$NOTES"
           fi
+          gh release edit "$TAG" --repo "$GITHUB_REPOSITORY" --notes "$NOTES"
           gh release view "$TAG" --repo "$GITHUB_REPOSITORY" --json url,name,isPrerelease,assets

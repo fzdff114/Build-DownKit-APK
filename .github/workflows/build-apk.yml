@@ -43,19 +43,29 @@ jobs:
           test -f DownKit-Android/gradlew
           test -f DownKit-Android/settings.gradle.kts
 
-      - name: Patch Kotlin and Gradle compatibility
+      - name: Patch Kotlin and ABI compatibility
         working-directory: DownKit-Android
         shell: bash
         run: |
           set -euo pipefail
           python3 - <<'PY'
           from pathlib import Path
+          nl = chr(10)
           p = Path("app/build.gradle.kts")
           s = p.read_text()
-          old = '    kotlinOptions {\n        jvmTarget = "17"\n    }'
-          s = s.replace(old, '', 1)
-          if 'kotlin {\\n    compilerOptions {' not in s:
-              s += '\\nkotlin {\\n    compilerOptions {\\n        jvmTarget.set(org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_17)\\n    }\\n}\\n'
+          old = nl.join(["    kotlinOptions {", '        jvmTarget = "17"', "    }"])
+          if old in s:
+              s = s.replace(old, "", 1)
+          if "compilerOptions {" not in s:
+              s += nl.join([
+                  "",
+                  "kotlin {",
+                  "    compilerOptions {",
+                  "        jvmTarget.set(org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_17)",
+                  "    }",
+                  "}",
+                  ""
+              ])
           lines = s.splitlines()
           if "    splits {" in lines:
               start = lines.index("    splits {")
@@ -63,11 +73,12 @@ jobs:
               if end is None:
                   raise SystemExit("Malformed ABI splits block")
               del lines[start:end + 1]
-          s = "\\n".join(lines) + "\\n"
+          s = nl.join(lines) + nl
+          if "splits {" in s:
+              raise SystemExit("ABI split block was not removed")
           p.write_text(s)
           w = Path("gradle/wrapper/gradle-wrapper.properties")
-          t = w.read_text()
-          t = t.replace("gradle-8.13-bin.zip", "gradle-8.14.4-bin.zip")
+          t = w.read_text().replace("gradle-8.13-bin.zip", "gradle-8.14.4-bin.zip")
           w.write_text(t)
           PY
           grep -n -A4 'compilerOptions' app/build.gradle.kts

@@ -1,15 +1,21 @@
 # DownKit Android
 
-这是 DownKit Android APK 的构建仓库。
+DownKit 是基于 yt-dlp 的 Android ARM64 视频/音频下载器。
 
-## 上传源码包
+## 下载应用
 
-将 ChatGPT 提供的 `DownKit-Android-source.zip` 上传到仓库根目录，文件名保持完全一致。
+**当前测试版：** [DownKit 1.0.0 (ARM64 Debug)](https://github.com/fzdff114/Build-DownKit-APK/releases/tag/v1.0.0)
 
-上传完成后，GitHub Actions 会自动构建；也可以进入 **Actions → Build DownKit APK → Run workflow** 手动启动。
+直接下载：[app-debug.apk](https://github.com/fzdff114/Build-DownKit-APK/releases/download/v1.0.0/app-debug.apk)
 
-## 下载 APK
+校验文件：[SHA256SUMS.txt](https://github.com/fzdff114/Build-DownKit-APK/releases/download/v1.0.0/SHA256SUMS.txt)
 
-构建成功后打开对应的 Actions 运行记录，在 **Artifacts** 区域下载 `DownKit-debug-apks`，解压后安装 `app-debug.apk`（当前构建仅针对 ARM64 手机）。
+当前版本面向 ARM64（arm64-v8a）安卓设备，APK 为 Debug 签名测试版，尚非正式发行签名版本。
 
-注意：该仓库的 Actions 负责云端构建，不会自动把 APK 安装到手机。构建失败时请打开运行记录查看具体日志。
+## 从源码构建
+
+将 `DownKit-Android-source.zip` 上传到仓库根目录，文件名保持不变。然后进入 **Actions → Build DownKit APK** 查看自动构建结果。构建成功后，Artifacts 中会提供 APK 压缩包。
+
+## 发布流程
+
+仓库的 **Publish DownKit APK Release** 工作流负责把已验证的 ARM64 APK 发布到 GitHub Releases，并附带 SHA-256 校验文件。

@@ -5,6 +5,7 @@ on:
   push:
     paths:
       - "DownKit-Android-source.zip"
+      - ".github/scripts/public-release-parts/**"
 
 permissions:
   contents: read

@@ -4,7 +4,7 @@ on:
   workflow_dispatch:
   push:
     paths:
-      - ".github/patches/v1.1.2/**"
+      - ".github/patches/v1.1.2-replacement/**"
       - ".github/workflows/build-apk.yml"
 
 permissions:
@@ -38,38 +38,38 @@ jobs:
           yes | "$SDKMANAGER" --licenses
           "$SDKMANAGER" --install "platforms;android-36" "build-tools;36.0.0" "ndk;27.2.12479018" "cmake;3.22.1"
 
-      - name: Download DownKit 1.1.1 source baseline
+      - name: Download current DownKit 1.1.2 source baseline
         shell: bash
         run: |
           set -euo pipefail
           curl -fL --retry 3 --retry-delay 2 \
-            "https://github.com/$GITHUB_REPOSITORY/releases/download/v1.1.1/DownKit-Android-1.1.1-source.zip" \
-            -o "$RUNNER_TEMP/downkit-1.1.1-source.zip"
+            "https://github.com/$GITHUB_REPOSITORY/releases/download/v1.1.2/DownKit-Android-1.1.2-source.zip" \
+            -o "$RUNNER_TEMP/downkit-1.1.2-source.zip"
           unzip -t "$RUNNER_TEMP/downkit-1.1.1-source.zip" >/dev/null
           mkdir -p DownKit-Android
           unzip -oq "$RUNNER_TEMP/downkit-1.1.1-source.zip" -d DownKit-Android
           test -f DownKit-Android/gradlew
           test -f DownKit-Android/app/src/main/java/com/downkit/android/MainActivity.kt
 
-      - name: Assemble and apply the 1.1.2 source overlay
+      - name: Apply the 1.1.2 replacement overlay
         shell: bash
         run: |
           set -euo pipefail
-          test -s .github/patches/v1.1.2/overlay-part01.b64
-          test -s .github/patches/v1.1.2/overlay-part02.b64
-          test -s .github/patches/v1.1.2/overlay-part03.b64
-          test -s .github/patches/v1.1.2/overlay-part04.b64
-          test -s .github/patches/v1.1.2/overlay-part05.b64
-          test -s .github/patches/v1.1.2/overlay-part06.b64
-          cat .github/patches/v1.1.2/overlay-part*.b64 | tr -d '\r\n ' | base64 --decode > "$RUNNER_TEMP/downkit-1.1.2-overlay.zip"
-          unzip -t "$RUNNER_TEMP/downkit-1.1.2-overlay.zip"
-          unzip -oq "$RUNNER_TEMP/downkit-1.1.2-overlay.zip" -d DownKit-Android
+          for part in 01 02 03 04 05 06; do
+            test -s ".github/patches/v1.1.2-replacement/overlay-part${part}.b64"
+          done
+          cat .github/patches/v1.1.2-replacement/overlay-part*.b64 | tr -d '\r\n ' | base64 --decode > "$RUNNER_TEMP/downkit-1.1.2-replacement.zip"
+          unzip -t "$RUNNER_TEMP/downkit-1.1.2-replacement.zip"
+          unzip -oq "$RUNNER_TEMP/downkit-1.1.2-replacement.zip" -d DownKit-Android
           grep -q 'applicationId = "com.downkit.android"' DownKit-Android/app/build.gradle.kts
-          grep -q 'versionCode = 6' DownKit-Android/app/build.gradle.kts
+          grep -q 'versionCode = 7' DownKit-Android/app/build.gradle.kts
           grep -q 'versionName = "1.1.2"' DownKit-Android/app/build.gradle.kts
+          grep -q 'class BackgroundCropView' DownKit-Android/app/src/main/java/com/downkit/android/BackgroundCropView.kt
+          grep -q 'fun displayMode' DownKit-Android/app/src/main/java/com/downkit/android/DownloadTaskStore.kt
+          grep -q 'autoButtonColor' DownKit-Android/app/src/main/java/com/downkit/android/DownloadTaskStore.kt
+          grep -q '裁剪背景图片' DownKit-Android/app/src/main/java/com/downkit/android/MainActivity.kt
+          grep -q '显示设置' DownKit-Android/app/src/main/java/com/downkit/android/MainActivity.kt
           python3 -m py_compile DownKit-Android/app/src/main/python/bridge.py
-          grep -q 'mediaInfo' DownKit-Android/app/src/main/java/com/downkit/android/MainActivity.kt
-          grep -q 'fragmentInfo' DownKit-Android/app/src/main/java/com/downkit/android/DownloadTaskStore.kt
 
       - name: Prepare ARM64 Kotlin and Gradle configuration
         working-directory: DownKit-Android

@@ -322,6 +322,172 @@ if 'App version:' not in main or 'Regex("(?im)^App version:' not in main:
 if 'backgroundPicker.launch("image/*")' not in main:
     raise SystemExit("GetContent picker launch did not install")
 
+# Keep the format-category controls readable on narrow screens.
+main = replace_once(main,
+'''                val selected = formats.getOrNull(selectedFormatIndex)?.takeIf { it.kind == kind }
+                text = when {
+                    count == 0 -> "$title\\n暂无可用格式"
+                    selected != null -> "$title\\n${selected.label}"
+                    else -> "$title\\n选择格式（$count 种）"
+                }
+                isAllCaps = false
+                maxLines = 2
+                ellipsize = android.text.TextUtils.TruncateAt.END
+                textSize = 12f
+                minWidth = 0
+                minHeight = dp(58)''',
+'''                val selected = formats.getOrNull(selectedFormatIndex)?.takeIf { it.kind == kind }
+                val selectedSummary = selected?.label?.split(" · ")?.take(2)?.joinToString(" · ")?.take(22).orEmpty()
+                text = when {
+                    count == 0 -> "$title\\n暂无可用格式"
+                    selected != null -> "$title\\n$selectedSummary"
+                    else -> "$title\\n选择格式（$count 种）"
+                }
+                isAllCaps = false
+                maxLines = 2
+                ellipsize = android.text.TextUtils.TruncateAt.END
+                textSize = 10.5f
+                minWidth = 0
+                minHeight = dp(64)''',
+"compact format category summary")
+main = main.replace("                height = dp(62)\n                setMargins(dp(3), dp(3), dp(3), dp(3))", "                height = dp(68)\n                setMargins(dp(3), dp(3), dp(3), dp(3))", 1)
+
+# Do not repeat the selected format label beside the real stream format.
+main = replace_once(main,
+'''        body.addView(detail, margin(bottom = 7))''',
+'''        body.addView(detail, margin(bottom = 7))''',
+"task detail remains a separate row")
+main = main.replace('        header.addView(clear)\n        header.addView(clear)\n', '        header.addView(clear)\n', 1)
+main = replace_once(main,
+'''        views.status.text = "${task.status} · ${task.formatLabel}"
+        views.mediaInfo.text = task.mediaInfo
+        views.mediaInfo.visibility = if (task.mediaInfo.isNotBlank()) View.VISIBLE else View.GONE''',
+'''        views.status.text = task.status
+        val actualFormat = task.mediaInfo.ifBlank { task.formatLabel }
+        views.mediaInfo.text = actualFormat
+        views.mediaInfo.visibility = if (actualFormat.isNotBlank()) View.VISIBLE else View.GONE''',
+"deduplicate task format rows")
+
+# Replace notifications with a rich collapsed line and expanded BigTextStyle.
+service_path = root / "app/src/main/java/com/downkit/android/DownloadService.kt"
+service = service_path.read_text(encoding="utf-8")
+if "private fun buildDownKitNotification" not in service:
+    helper = '''private fun buildDownKitNotification(
+    context: Context, task: DownloadTask?, progress: Int = task?.progress ?: 0, status: String = task?.status ?: "正在连接"
+): Notification {
+    val bytes = task?.let {
+        File(context.filesDir, "downloads/${it.id}").walkTopDown().filter { file -> file.isFile }.sumOf { file -> file.length() }
+    } ?: 0L
+    val written = when {
+        bytes >= 1024L * 1024L * 1024L -> String.format("%.1f GB", bytes / 1073741824.0)
+        bytes >= 1024L * 1024L -> String.format("%.1f MB", bytes / 1048576.0)
+        bytes >= 1024L -> String.format("%.1f KB", bytes / 1024.0)
+        bytes > 0 -> "$bytes B"
+        else -> "大小暂未统计"
+    }
+    val media = task?.mediaInfo?.takeIf { it.isNotBlank() } ?: task?.formatLabel.orEmpty()
+    val detail = task?.detail.orEmpty()
+    val progressText = if (progress > 0) "$progress%" else status
+    val speedEta = listOf(
+        task?.speed?.takeIf { it.isNotBlank() }?.let { "速度 $it" },
+        task?.eta?.takeIf { it.isNotBlank() }?.let { "剩余 $it" }
+    ).filterNotNull().joinToString(" · ")
+    val compact = listOf(media, progressText, detail, speedEta).filter { it.isNotBlank() }.joinToString(" · ").take(180)
+    val expanded = listOf(
+        "状态：$status",
+        media,
+        detail,
+        "进度：$progressText",
+        speedEta,
+        "已写入文件：$written"
+    ).filter { it.isNotBlank() }.joinToString("\\n")
+    val open = PendingIntent.getActivity(
+        context, 0, Intent(context, MainActivity::class.java), PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+    )
+    return NotificationCompat.Builder(context, "downkit_downloads")
+        .setSmallIcon(R.drawable.ic_stat_download)
+        .setContentTitle((task?.title ?: "DownKit").take(72))
+        .setContentText(compact)
+        .setStyle(NotificationCompat.BigTextStyle().setBigContentTitle(task?.title ?: "DownKit").bigText(expanded))
+        .setSubText("DownKit 下载进度")
+        .setContentIntent(open)
+        .setOngoing(status !in setOf("已完成", "已取消", "失败"))
+        .setOnlyAlertOnce(true)
+        .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
+        .setProgress(100, progress.coerceIn(0, 100), progress <= 0 || status in setOf("连接网站", "正在合并/整理", "正在保存"))
+        .build()
+}
+'''
+    service = service.replace("class DownloadService : Service() {", helper + "\\n\\nclass DownloadService : Service() {", 1)
+service = replace_once(service,
+'''            val notification = buildNotification(firstTask?.title ?: "DownKit", 0, "正在连接")''',
+'''            val notification = buildDownKitNotification(this, firstTask, 0, "正在连接")''',
+"initial rich notification")
+start = service.find("    private fun buildNotification(")
+end = service.find("    private fun updateNotification", start)
+if start >= 0 and end > start:
+    service = service[:start] + service[end:]
+service = replace_once(service,
+'''        manager.notify(NOTIFICATION_ID, buildNotification(task.title, task.progress, task.status))''',
+'''        manager.notify(NOTIFICATION_ID, buildDownKitNotification(this, task))''',
+"service notification update")
+service = replace_once(service,
+'''            val notification = NotificationCompat.Builder(context, CHANNEL_ID)
+                .setSmallIcon(R.drawable.ic_stat_download)
+                .setContentTitle(task.title.take(72))
+                .setContentText(if (task.progress in 1..99) "${task.progress}%" else task.status)
+                .setContentIntent(open).setOngoing(true).setOnlyAlertOnce(true)
+                .setProgress(100, task.progress.coerceIn(0, 100), task.progress <= 0).build()
+            manager.notify(NOTIFICATION_ID, notification)''',
+'''            manager.notify(NOTIFICATION_ID, buildDownKitNotification(context, task))''',
+"rich notification refresh path")
+service_path.write_text(service, encoding="utf-8")
+
+# Report actual stream extension, keep audio streams from inheriting a video resolution,
+# and avoid repeating extension/format ID in the detail row.
+bridge_path = root / "app/src/main/python/bridge.py"
+bridge = bridge_path.read_text(encoding="utf-8")
+bridge = replace_once(bridge,
+'''            width = info.get("width")
+            height = info.get("height")
+            resolution = info.get("resolution")
+            if width and height:
+                resolution = f"{int(width)}×{int(height)}"
+            elif height:
+                resolution = f"{int(height)}p"
+            elif vcodec == "none":
+                resolution = "音频"
+            else:
+                resolution = resolution or "分辨率未知"''',
+'''            width = info.get("width")
+            height = info.get("height")
+            resolution = info.get("resolution")
+            if vcodec == "none":
+                resolution = "音频"
+            elif width and height:
+                resolution = f"{int(width)}×{int(height)}"
+            elif height:
+                resolution = f"{int(height)}p"
+            else:
+                resolution = resolution or "分辨率未知"''',
+"audio resolution display")
+bridge = replace_once(bridge,
+'''            if stage == "finished":
+                detail = f"{stream_kind} {format_id}.{ext} 已完成 · {downloaded_text} · 正在检查下一个流或准备合并"
+            elif stage == "error":
+                detail = f"{stream_kind} {format_id}.{ext} 下载失败 · {status.get('error') or '请查看任务错误信息'}"
+            else:
+                detail = f"{stream_kind} · 格式 {format_id}.{ext} · {fragment_text} · {downloaded_text}/{total_text} · {speed}"
+                if eta:
+                    detail += f" · 预计剩余 {eta}"''',
+'''            if stage == "finished":
+                detail = f"已下载 {downloaded_text} · 正在检查下一个流或准备合并"
+            elif stage == "error":
+                detail = f"下载失败 · {status.get('error') or '请查看任务错误信息'}"
+            else:
+                detail = f"{fragment_text} · 已下载 {downloaded_text}/{total_text}"''',
+"deduplicate per-task progress detail")
+bridge_path.write_text(bridge, encoding="utf-8")
 main_path.write_text(main, encoding="utf-8")
 gradle_path.write_text(gradle, encoding="utf-8")
 print("DownKit 1.1.3 replacement fixes applied (versionCode 9)")

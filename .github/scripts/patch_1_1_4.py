@@ -800,6 +800,39 @@ bridge = replace_once(bridge,
 '''            "concurrent_fragment_downloads": max(1, min(100, int(download_threads or 1))),''',
 "configure native fragmented-download concurrency")
 bridge_path.write_text(bridge, encoding="utf-8")
+main = replace_once(main,
+'''        column.addView(networkCard, margin(bottom = 11))
+
+        val storageCard = card()''',
+'''        column.addView(networkCard, margin(bottom = 11))
+
+        val accelerationCard = card()
+        val acceleration = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL; setPadding(dp(15)) }
+        acceleration.addView(text("多线程分段下载", 15, true, Color.rgb(23, 32, 51)), margin(bottom = 5))
+        acceleration.addView(text("默认 1 线程，最高 100。支持 HTTP Range 的直链会按不重叠字节区间并发下载并按顺序合并；HLS/DASH 使用网站提供的分片并发。不支持 Range 时自动回退单线程。", 11, false, Color.rgb(102, 112, 133)), margin(bottom = 7))
+        val threadValue = text("${DownloadTaskStore.downloadThreads(this)} 线程", 13, true, Color.rgb(75, 91, 118))
+        acceleration.addView(threadValue, margin(bottom = 3))
+        val threadSlider = SeekBar(this).apply {
+            max = 99
+            progress = DownloadTaskStore.downloadThreads(this@MainActivity) - 1
+        }
+        threadSlider.setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
+            override fun onProgressChanged(seekBar: SeekBar?, progress: Int, fromUser: Boolean) {
+                threadValue.text = "${progress + 1} 线程"
+            }
+            override fun onStartTrackingTouch(seekBar: SeekBar?) {}
+            override fun onStopTrackingTouch(seekBar: SeekBar?) {
+                DownloadTaskStore.setDownloadThreads(this@MainActivity, (seekBar?.progress ?: 0) + 1)
+                toast("下载线程数已保存")
+            }
+        })
+        acceleration.addView(threadSlider, margin(bottom = 4))
+        acceleration.addView(text("1 = 单线程；2–100 = 按服务器能力并发分段。线程过多可能被网站限速或拒绝，建议先从 4–8 开始。", 10, false, Color.rgb(122, 132, 150)))
+        accelerationCard.addView(acceleration)
+        column.addView(accelerationCard, margin(bottom = 11))
+
+        val storageCard = card()''',
+"download thread setting UI")
 main_path.write_text(main, encoding="utf-8")
 gradle_path.write_text(gradle, encoding="utf-8")
 print("DownKit 1.1.4 corrections applied (versionCode 9)")

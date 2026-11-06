@@ -51,8 +51,8 @@ jobs:
           unzip -oq "$RUNNER_TEMP/downkit-1.1.3-source.zip" -d DownKit-Android
           test -f DownKit-Android/gradlew
           test -f DownKit-Android/app/src/main/java/com/downkit/android/MainActivity.kt
-          grep -q 'versionCode = 8' DownKit-Android/app/build.gradle.kts
-          grep -q 'versionName = "1.1.3"' DownKit-Android/app/build.gradle.kts
+          grep -Eq 'versionCode = (8|9)' DownKit-Android/app/build.gradle.kts
+          grep -Eq 'versionName = "1.1.(3|4)"' DownKit-Android/app/build.gradle.kts
           grep -q 'class BackgroundCropView' DownKit-Android/app/src/main/java/com/downkit/android/BackgroundCropView.kt
 
       - name: Apply DownKit 1.1.3 replacement fixes

@@ -5,6 +5,8 @@ on:
   push:
     paths:
       - ".github/scripts/patch_1_1_4.py"
+      - ".github/scripts/patch_parallel_download.py"
+      - ".github/scripts/test_parallel_http.py"
 
 permissions:
   contents: read

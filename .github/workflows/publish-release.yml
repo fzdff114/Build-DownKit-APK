@@ -23,18 +23,16 @@ jobs:
           BUILD_RUN_ID: ${{ github.event.workflow_run.id }}
         run: |
           set -euo pipefail
-          gh run download "$BUILD_RUN_ID" --repo "$GITHUB_REPOSITORY" --name DownKit-1.1.4-release-package --dir release-package
-          test -s release-package/DownKit-1.1.4-arm64.apk
-          test -s release-package/DownKit-Android-1.1.4-source.zip
+          gh run download "$BUILD_RUN_ID" --repo "$GITHUB_REPOSITORY" --name DownKit-1.1.3-release-package --dir release-package
+          test -s release-package/DownKit-1.1.3-arm64.apk
+          test -s release-package/DownKit-Android-1.1.3-source.zip
           test -s release-package/SHA256SUMS.txt
           (cd release-package && sha256sum --check SHA256SUMS.txt)
-          unzip -t release-package/DownKit-Android-1.1.4-source.zip >/dev/null
-          cp release-package/DownKit-1.1.4-arm64.apk release-package/DownKit-1.1.3-arm64.apk
-          cp release-package/DownKit-Android-1.1.4-source.zip release-package/DownKit-Android-1.1.3-source.zip
-          (cd release-package && sha256sum DownKit-1.1.3-arm64.apk DownKit-Android-1.1.3-source.zip > SHA256SUMS-v1.1.3.txt)
-          mv release-package/SHA256SUMS-v1.1.3.txt release-package/SHA256SUMS.txt
+          unzip -t release-package/DownKit-Android-1.1.3-source.zip >/dev/null
+          (cd release-package && sha256sum --check SHA256SUMS.txt)
+          unzip -t release-package/DownKit-Android-1.1.3-source.zip >/dev/null
 
-      - name: Publish DownKit 1.1.4
+      - name: Publish DownKit 1.1.3
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
@@ -43,9 +41,9 @@ jobs:
           NOTES="$(cat <<'EOF'
           # DownKit 1.1.3 — replacement build
 
-          This updates the existing v1.1.3 release assets. The included Android application identifies itself as the corrected **1.1.4** build.
+          This updates the existing v1.1.3 release assets. The installed Android application also identifies itself as **1.1.3**.
 
-          App version: 1.1.4 (versionCode 9)
+          App version: 1.1.3 (versionCode 9)
 
           ## Corrections included
           - The home screen has two distinct format-category entries: **Video options** and **Audio options**. Each opens its own list of formats actually returned by yt-dlp.
@@ -65,7 +63,7 @@ jobs:
           - ARM64 (`arm64-v8a`) Android APK.
 
           ## Downloads
-          - DownKit-1.1.3-arm64.apk — stable v1.1.3 download URL; application version 1.1.4.
+          - DownKit-1.1.3-arm64.apk — stable v1.1.3 download URL; application version 1.1.3.
           - DownKit-Android-1.1.3-source.zip — complete source for the replacement build.
           - SHA256SUMS.txt — SHA-256 checksums.
 
@@ -80,8 +78,5 @@ jobs:
           (cd release-verify && sha256sum --check SHA256SUMS.txt)
           unzip -t release-verify/DownKit-Android-1.1.3-source.zip >/dev/null
           test -s release-verify/DownKit-1.1.3-arm64.apk
-          # Remove the automatically-created 1.1.4 tag so the existing v1.1.3 release remains the only public release slot.
-          if gh release view "v1.1.4" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
-            gh release delete "v1.1.4" --repo "$GITHUB_REPOSITORY" --yes --cleanup-tag
-          fi
+
           gh release view "$TAG" --repo "$GITHUB_REPOSITORY" --json url,name,isPrerelease,assets

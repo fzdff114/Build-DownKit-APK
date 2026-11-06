@@ -27,6 +27,10 @@ jobs:
           sed -n '115,190p' DownKit-Android/app/src/main/java/com/downkit/android/DownloadService.kt
           echo '===== BRIDGE ====='
           sed -n '120,180p' DownKit-Android/app/src/main/python/bridge.py
+          echo '===== TOP/DOWNLOAD/SETTINGS ====='
+          sed -n '70,135p' DownKit-Android/app/src/main/java/com/downkit/android/MainActivity.kt
+          sed -n '570,605p' DownKit-Android/app/src/main/java/com/downkit/android/MainActivity.kt
+          grep -n -B25 -A110 '显示设置' DownKit-Android/app/src/main/java/com/downkit/android/MainActivity.kt || true
           echo '===== KEYWORD GREP ====='
           for f in DownKit-Android/app/src/main/java/com/downkit/android/MainActivity.kt DownKit-Android/app/src/main/java/com/downkit/android/DownloadTaskStore.kt DownKit-Android/app/src/main/java/com/downkit/android/DownloadService.kt DownKit-Android/app/src/main/java/com/downkit/android/DownloadEvents.kt DownKit-Android/app/src/main/python/bridge.py; do
             echo "===== $f ====="

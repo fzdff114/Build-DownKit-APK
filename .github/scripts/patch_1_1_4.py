@@ -386,16 +386,18 @@ if "private fun buildDownKitNotification" not in service:
         else -> "大小暂未统计"
     }
     val media = task?.mediaInfo?.takeIf { it.isNotBlank() } ?: task?.formatLabel.orEmpty()
+    val fragment = task?.fragmentInfo.orEmpty()
     val detail = task?.detail.orEmpty()
     val progressText = if (progress > 0) "$progress%" else status
     val speedEta = listOf(
         task?.speed?.takeIf { it.isNotBlank() }?.let { "速度 $it" },
         task?.eta?.takeIf { it.isNotBlank() }?.let { "剩余 $it" }
     ).filterNotNull().joinToString(" · ")
-    val compact = listOf(media, progressText, detail, speedEta).filter { it.isNotBlank() }.joinToString(" · ").take(180)
+    val compact = listOf(media, progressText, fragment, detail, speedEta).filter { it.isNotBlank() }.joinToString(" · ").take(180)
     val expanded = listOf(
         "状态：$status",
         media,
+        fragment,
         detail,
         "进度：$progressText",
         speedEta,
@@ -485,7 +487,7 @@ bridge = replace_once(bridge,
             elif stage == "error":
                 detail = f"下载失败 · {status.get('error') or '请查看任务错误信息'}"
             else:
-                detail = f"{fragment_text} · 已下载 {downloaded_text}/{total_text}"''',
+                detail = f"已下载 {downloaded_text}/{total_text}"''',
 "deduplicate per-task progress detail")
 bridge_path.write_text(bridge, encoding="utf-8")
 main_path.write_text(main, encoding="utf-8")

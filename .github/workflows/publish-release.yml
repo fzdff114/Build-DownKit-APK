@@ -11,72 +11,122 @@ permissions:
 
 jobs:
   publish:
-    if: ${{ github.event.workflow_run.conclusion == 'success' }}
+    if: ${{ github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.head_branch == 'main' }}
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Download and verify signed package
+      - name: Download and verify the new 1.1.4 build
         env:
           GH_TOKEN: ${{ github.token }}
           BUILD_RUN_ID: ${{ github.event.workflow_run.id }}
         run: |
           set -euo pipefail
-          gh run download "$BUILD_RUN_ID" --repo "$GITHUB_REPOSITORY" --name DownKit-1.1.3-release-package --dir release-package
-          test -s release-package/DownKit-1.1.3-arm64.apk
-          test -s release-package/DownKit-Android-1.1.3-source.zip
-          test -s release-package/SHA256SUMS.txt
-          (cd release-package && sha256sum --check SHA256SUMS.txt)
-          unzip -t release-package/DownKit-Android-1.1.3-source.zip >/dev/null
-          (cd release-package && sha256sum --check SHA256SUMS.txt)
-          unzip -t release-package/DownKit-Android-1.1.3-source.zip >/dev/null
+          gh run download "$BUILD_RUN_ID" --repo "$GITHUB_REPOSITORY" --name DownKit-1.1.4-release-package --dir release-1.1.4
+          test -s release-1.1.4/DownKit-1.1.4-arm64.apk
+          test -s release-1.1.4/DownKit-Android-1.1.4-source.zip
+          test -s release-1.1.4/SHA256SUMS.txt
+          (cd release-1.1.4 && sha256sum --check SHA256SUMS.txt)
+          unzip -t release-1.1.4/DownKit-Android-1.1.4-source.zip >/dev/null
 
-      - name: Publish DownKit 1.1.3
+      - name: Restore the original 1.1.3 release assets
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
           set -euo pipefail
-          TAG="v1.1.3"
-          NOTES="$(cat <<'EOF'
-          # DownKit 1.1.3 — replacement build
+          gh run download 42170117548 --repo "$GITHUB_REPOSITORY" --name DownKit-1.1.3-release-package --dir restore-1.1.3
+          test -s restore-1.1.3/DownKit-1.1.3-arm64.apk
+          test -s restore-1.1.3/DownKit-Android-1.1.3-source.zip
+          test -s restore-1.1.3/SHA256SUMS.txt
+          (cd restore-1.1.3 && sha256sum --check SHA256SUMS.txt)
+          unzip -t restore-1.1.3/DownKit-Android-1.1.3-source.zip >/dev/null
 
-          This updates the existing v1.1.3 release assets. The installed Android application also identifies itself as **1.1.3**.
+          ORIGINAL_NOTES="$(cat <<'EOF'
+          # DownKit 1.1.3
 
-          App version: 1.1.3 (versionCode 9)
+          New DownKit 1.1.3 release. ARM64 Android APK signed with the same persistent Release key. Version 1.1.3 uses versionCode 8 and can upgrade the previous 1.1.2 build in place.
 
-          ## Corrections included
-          - The home screen has two distinct format-category entries: **Video options** and **Audio options**. Each opens its own list of formats actually returned by yt-dlp.
-          - Choosing a format only selects it. It does not immediately start a download. The separate **Start download** button starts the queued task.
-          - Automatic best quality, compatibility-first single-file and audio-only choices are retained.
-          - Format labels are constrained to the available button width and truncated cleanly on narrow screens.
-          - Background import opens the crop editor. The crop box can be moved and resized with its corner handles; the cropped image is saved in app-private storage.
-          - System default, Light and Dark display modes remain available.
-          - Automatic background-color matching is offered only after a custom background is imported.
-          - Removed the Button color preview control. RGB sliders and restore-default color remain.
-          - The in-app updater reads the App version field in these release notes, so a replacement binary can be detected even though the public release tag remains v1.1.3.
-
-          ## Upgrade compatibility
-          - Package ID remains `com.downkit.android`.
-          - The same persistent Release signing key is used.
-          - APK versionCode 9 is higher than v1.1.3 versionCode 8, so it supports an in-place upgrade.
-          - ARM64 (`arm64-v8a`) Android APK.
+          ## What's improved
+          - Background import opens a crop editor. Drag inside the crop box to move it and drag the four corner handles to resize it.
+          - The crop selection keeps the app page's aspect ratio. The high-quality cropped image is saved inside the app and remains after restart.
+          - Background rendering uses full-image fitting rather than forced CENTER_CROP, avoiding the old double-crop / incomplete-background issue.
+          - Added display mode controls: System default, Light and Dark. The selected mode is saved and restored.
+          - Added automatic button accent matching from the background's dominant color. It re-evaluates when the background changes.
+          - Kept manual RGB controls. Moving an RGB slider turns off automatic color matching; the manual color persists.
+          - Existing download format/resolution, fragment progress, compact notifications and download features are retained.
 
           ## Downloads
-          - DownKit-1.1.3-arm64.apk — stable v1.1.3 download URL; application version 1.1.3.
-          - DownKit-Android-1.1.3-source.zip — complete source for the replacement build.
+          - DownKit-1.1.3-arm64.apk — ARM64 Android installer.
+          - DownKit-Android-1.1.3-source.zip — complete public Android Studio source.
           - SHA256SUMS.txt — SHA-256 checksums.
 
-          Site support depends on the target website, network and login state. DRM-protected media is not supported.
+          ## Upgrade
+          Uses the same application ID and the same fixed Release signing key as 1.1.2, with versionCode 8 for an in-place upgrade. No uninstall should be required.
+
+          ## Compatibility
+          Uses yt-dlp and inherits supported-site and site-change limitations. Some sites may require user-supplied cookies or specific network access. DRM-protected media is not supported.
           EOF
           )"
-          gh release view "$TAG" --repo "$GITHUB_REPOSITORY" >/dev/null
-          gh release edit "$TAG" --repo "$GITHUB_REPOSITORY" --title "DownKit 1.1.3" --notes "$NOTES"
-          gh release upload "$TAG" release-package/DownKit-1.1.3-arm64.apk release-package/DownKit-Android-1.1.3-source.zip release-package/SHA256SUMS.txt --repo "$GITHUB_REPOSITORY" --clobber
-          mkdir -p release-verify
-          gh release download "$TAG" --repo "$GITHUB_REPOSITORY" --pattern "DownKit-1.1.3-arm64.apk" --pattern "DownKit-Android-1.1.3-source.zip" --pattern "SHA256SUMS.txt" --dir release-verify
-          (cd release-verify && sha256sum --check SHA256SUMS.txt)
-          unzip -t release-verify/DownKit-Android-1.1.3-source.zip >/dev/null
-          test -s release-verify/DownKit-1.1.3-arm64.apk
 
+          gh release view "v1.1.3" --repo "$GITHUB_REPOSITORY" >/dev/null
+          gh release edit "v1.1.3" --repo "$GITHUB_REPOSITORY" --title "DownKit 1.1.3" --notes "$ORIGINAL_NOTES"
+          gh release upload "v1.1.3" restore-1.1.3/DownKit-1.1.3-arm64.apk restore-1.1.3/DownKit-Android-1.1.3-source.zip restore-1.1.3/SHA256SUMS.txt --repo "$GITHUB_REPOSITORY" --clobber
+
+          mkdir -p verify-1.1.3
+          gh release download "v1.1.3" --repo "$GITHUB_REPOSITORY" --pattern "DownKit-1.1.3-arm64.apk" --pattern "DownKit-Android-1.1.3-source.zip" --pattern "SHA256SUMS.txt" --dir verify-1.1.3
+          (cd verify-1.1.3 && sha256sum --check SHA256SUMS.txt)
+          unzip -t verify-1.1.3/DownKit-Android-1.1.3-source.zip >/dev/null
+
+      - name: Publish genuine 1.1.4
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          TAG="v1.1.4"
+          NOTES="$(cat <<'EOF'
+          # DownKit 1.1.4
+
+          App version: 1.1.4 (versionCode 9)
+
+          ## Parallel download
+          - Added a configurable download concurrency setting from 1 to 100, defaulting to 1.
+          - For progressive HTTP media that supports byte ranges, DownKit requests exact, non-overlapping byte intervals concurrently. Every response's HTTP 206 status, Content-Range and byte count is checked.
+          - Completed intervals are joined once, in original byte order. The merged file size is verified before it is handed back to yt-dlp.
+          - Native HLS/DASH fragments use yt-dlp's concurrent fragment downloader with the same configured upper limit.
+          - Servers that do not support exact Range requests automatically fall back to the original single-connection downloader. Interrupted downloads keep yt-dlp's normal resume path.
+          - The maximum is capped at 100; actual parallel workers are also limited by the media size to avoid making tiny requests.
+
+          ## Other corrections
+          - Video and Audio format categories open separate lists; selecting a format does not start the download until Start Download is pressed.
+          - Actual website container extensions and media details are retained.
+          - Background crop, System/Light/Dark modes and opt-in background accent matching are retained.
+          - Download notifications show the media format, progress, size and speed in expanded details.
+
+          ## Upgrade compatibility
+          - Application ID remains "com.downkit.android".
+          - Same persistent Release signing key as 1.1.2 and 1.1.3.
+          - versionCode 9 is higher than 1.1.3's versionCode 8, so both 1.1.2 and 1.1.3 can upgrade in place.
+          - ARM64 (arm64-v8a) Android APK.
+
+          ## Downloads
+          - DownKit-1.1.4-arm64.apk — signed ARM64 installer.
+          - DownKit-Android-1.1.4-source.zip — complete Android Studio source.
+          - SHA256SUMS.txt — SHA-256 checksums.
+
+          Parallel speed depends on the website and network. Sites that do not support byte-range requests use the safe single-connection fallback. DRM-protected media is not supported.
+          EOF
+          )"
+          if gh release view "$TAG" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
+            gh release edit "$TAG" --repo "$GITHUB_REPOSITORY" --title "DownKit 1.1.4" --notes "$NOTES"
+          else
+            gh release create "$TAG" --repo "$GITHUB_REPOSITORY" --title "DownKit 1.1.4" --notes "$NOTES"
+          fi
+          gh release upload "$TAG" release-1.1.4/DownKit-1.1.4-arm64.apk release-1.1.4/DownKit-Android-1.1.4-source.zip release-1.1.4/SHA256SUMS.txt --repo "$GITHUB_REPOSITORY" --clobber
+
+          mkdir -p verify-1.1.4
+          gh release download "$TAG" --repo "$GITHUB_REPOSITORY" --pattern "DownKit-1.1.4-arm64.apk" --pattern "DownKit-Android-1.1.4-source.zip" --pattern "SHA256SUMS.txt" --dir verify-1.1.4
+          (cd verify-1.1.4 && sha256sum --check SHA256SUMS.txt)
+          unzip -t verify-1.1.4/DownKit-Android-1.1.4-source.zip >/dev/null
+          test -s verify-1.1.4/DownKit-1.1.4-arm64.apk
           gh release view "$TAG" --repo "$GITHUB_REPOSITORY" --json url,name,isPrerelease,assets

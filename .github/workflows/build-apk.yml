@@ -5,6 +5,7 @@ on:
   push:
     paths:
       - ".github/patches/v1.1.2-replacement/**"
+      - ".github/scripts/patch_1_1_3.py"
       - ".github/workflows/build-apk.yml"
 
 permissions:
@@ -43,7 +44,7 @@ jobs:
         run: |
           set -euo pipefail
           curl -fL --retry 3 --retry-delay 2 \
-            "https://github.com/$GITHUB_REPOSITORY/releases/download/v1.1.2/DownKit-Android-1.1.2-source.zip" \
+            "https://github.com/$GITHUB_REPOSITORY/releases/download/v1.1.2/DownKit-Android-1.1.3-source.zip" \
             -o "$RUNNER_TEMP/downkit-1.1.2-source.zip"
           unzip -t "$RUNNER_TEMP/downkit-1.1.2-source.zip" >/dev/null
           mkdir -p DownKit-Android
@@ -69,6 +70,18 @@ jobs:
           grep -q 'autoButtonColor' DownKit-Android/app/src/main/java/com/downkit/android/DownloadTaskStore.kt
           grep -q '裁剪背景图片' DownKit-Android/app/src/main/java/com/downkit/android/MainActivity.kt
           grep -q '显示设置' DownKit-Android/app/src/main/java/com/downkit/android/MainActivity.kt
+          python3 -m py_compile DownKit-Android/app/src/main/python/bridge.py
+
+      - name: Apply DownKit 1.1.3 fixes
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 .github/scripts/patch_1_1_3.py
+          grep -q 'versionCode = 8' DownKit-Android/app/build.gradle.kts
+          grep -q 'versionName = "1.1.3"' DownKit-Android/app/build.gradle.kts
+          grep -q '下载视频' DownKit-Android/app/src/main/java/com/downkit/android/MainActivity.kt
+          grep -q '下载音频' DownKit-Android/app/src/main/java/com/downkit/android/MainActivity.kt
+          grep -q 'downkit.current.tab' DownKit-Android/app/src/main/java/com/downkit/android/MainActivity.kt
           python3 -m py_compile DownKit-Android/app/src/main/python/bridge.py
 
       - name: Prepare ARM64 Kotlin and Gradle configuration
@@ -143,16 +156,16 @@ jobs:
         run: |
           set -euo pipefail
           mkdir -p release-package
-          cp DownKit-Android/app/build/outputs/apk/release/app-release.apk release-package/DownKit-1.1.2-arm64.apk
-          (cd DownKit-Android && zip -qr -X "$GITHUB_WORKSPACE/release-package/DownKit-Android-1.1.2-source.zip" . -x '*/build/*' '.gradle/*' '*/.cxx/*' 'local.properties')
-          (cd release-package && sha256sum DownKit-1.1.2-arm64.apk DownKit-Android-1.1.2-source.zip > SHA256SUMS.txt)
-          unzip -t release-package/DownKit-Android-1.1.2-source.zip >/dev/null
+          cp DownKit-Android/app/build/outputs/apk/release/app-release.apk release-package/DownKit-1.1.3-arm64.apk
+          (cd DownKit-Android && zip -qr -X "$GITHUB_WORKSPACE/release-package/DownKit-Android-1.1.3-source.zip" . -x '*/build/*' '.gradle/*' '*/.cxx/*' 'local.properties')
+          (cd release-package && sha256sum DownKit-1.1.3-arm64.apk DownKit-Android-1.1.3-source.zip > SHA256SUMS.txt)
+          unzip -t release-package/DownKit-Android-1.1.3-source.zip >/dev/null
           ls -lh release-package/
 
       - name: Upload signed release package
         uses: actions/upload-artifact@v4
         with:
-          name: DownKit-1.1.2-release-package
+          name: DownKit-1.1.3-release-package
           path: release-package/*
           if-no-files-found: error
           retention-days: 30

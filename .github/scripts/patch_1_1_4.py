@@ -9,6 +9,8 @@ gradle = gradle_path.read_text(encoding="utf-8")
 
 def replace_once(source, old, new, name):
     if old not in source:
+        if new in source:
+            return source  # Already patched; keep this script idempotent.
         raise SystemExit("Missing expected source block: " + name)
     return source.replace(old, new, 1)
 

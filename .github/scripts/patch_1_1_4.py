@@ -422,7 +422,7 @@ if "private fun buildDownKitNotification" not in service:
         .build()
 }
 '''
-    service = service.replace("class DownloadService : Service() {", helper + "\\n\\nclass DownloadService : Service() {", 1)
+    service = service.replace("class DownloadService : Service() {", helper + "\n\nclass DownloadService : Service() {", 1)
 service = replace_once(service,
 '''            val notification = buildNotification(firstTask?.title ?: "DownKit", 0, "正在连接")''',
 '''            val notification = buildDownKitNotification(this, firstTask, 0, "正在连接")''',
@@ -445,6 +445,8 @@ service = replace_once(service,
             manager.notify(NOTIFICATION_ID, notification)''',
 '''            manager.notify(NOTIFICATION_ID, buildDownKitNotification(context, task))''',
 "rich notification refresh path")
+if "\\n\\nclass DownloadService : Service() {" in service:
+    raise SystemExit("DownloadService insertion left literal newline escapes")
 service_path.write_text(service, encoding="utf-8")
 
 # Report actual stream extension, keep audio streams from inheriting a video resolution,

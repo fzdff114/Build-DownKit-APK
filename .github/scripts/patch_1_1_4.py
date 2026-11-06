@@ -101,7 +101,11 @@ main = replace_once(main,
         renderFormatOptions()
         parseStageView?.text = "解析完成 · 已读取标题、封面和 ${formats.size} 种格式"''',
 '''        val formatArray = result.optJSONArray("formats")
-        formats = (0 until (formatArray?.length() ?: 0)).mapNotNull { index ->
+        formats = listOf(
+            FormatChoice("自动最佳画质 · 视频 + 音频", "bestvideo+bestaudio/best", "video"),
+            FormatChoice("兼容优先 · 最佳单文件", "best", "video"),
+            FormatChoice("仅音频 · 最佳可用音质", "bestaudio/best", "audio")
+        ) + (0 until (formatArray?.length() ?: 0)).mapNotNull { index ->
             val item = formatArray?.optJSONObject(index) ?: return@mapNotNull null
             val selector = item.optString("selector").takeIf { it.isNotBlank() } ?: return@mapNotNull null
             val kind = item.optString("kind").ifBlank { if (item.optString("has_video") == "true") "video" else "audio" }

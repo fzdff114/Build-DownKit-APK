@@ -7,6 +7,7 @@ on:
       - ".github/scripts/patch_1_1_4.py"
       - ".github/scripts/patch_parallel_download.py"
       - ".github/scripts/test_parallel_http.py"
+      - "DownKit-Android/app/src/main/python/parallel_http.py"
 
 permissions:
   contents: read
@@ -44,7 +45,7 @@ jobs:
         run: |
           set -euo pipefail
           curl -fL --retry 3 --retry-delay 2 \
-            "https://github.com/$GITHUB_REPOSITORY/releases/download/v1.1.3/DownKit-Android-1.1.4-source.zip" \
+            "https://github.com/$GITHUB_REPOSITORY/releases/download/v1.1.3/DownKit-Android-1.1.3-source.zip" \
             -o "$RUNNER_TEMP/downkit-1.1.3-source.zip"
           unzip -t "$RUNNER_TEMP/downkit-1.1.3-source.zip" >/dev/null
           mkdir -p DownKit-Android
@@ -76,13 +77,6 @@ jobs:
           grep -Fq '.setPositiveButton("确定", null)' "$MAIN"
           grep -Fq 'FormatChoice("自动最佳画质 · 视频 + 音频"' "$MAIN"
           grep -Fq 'FormatChoice("仅音频 · 最佳可用音质"' "$MAIN"
-          grep -Fq 'max = 99' "$MAIN"
-          grep -Fq 'fun downloadThreads(context: Context): Int' DownKit-Android/app/src/main/java/com/downkit/android/DownloadTaskStore.kt
-          grep -Fq 'download_threads: int = 1' DownKit-Android/app/src/main/python/bridge.py
-          grep -Fq 'def _downkit_parallel_http_download' DownKit-Android/app/src/main/python/bridge.py
-          grep -Fq 'Content-Range' DownKit-Android/app/src/main/python/bridge.py
-          grep -Fq 'concurrent_fragment_downloads": max(1, min(100, int(download_threads or 1)))' DownKit-Android/app/src/main/python/bridge.py
-          grep -Fq 'DownloadTaskStore.downloadThreads(this)' DownKit-Android/app/src/main/java/com/downkit/android/DownloadService.kt
           grep -Fq 'Regex("(?im)^App version:' "$MAIN"
           grep -q 'ActivityResultContracts.GetContent()' "$MAIN"
           grep -Fq 'backgroundPicker.launch("image/*")' "$MAIN"

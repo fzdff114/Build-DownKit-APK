@@ -69,9 +69,11 @@ main_path.write_text(main, encoding="utf-8")
 service = service_path.read_text(encoding="utf-8")
 service = replace_once(
     service,
-    '''                        task.id, cookies, proxy, playlist
+    '''                        "download_video", task.url, task.formatSelector, taskDir.absolutePath,
+                        task.id, cookies, proxy, playlist
                     ).toString()''',
-    '''                        task.id, cookies, proxy, playlist, DownloadTaskStore.downloadThreads(this)
+    '''                        "download_video", task.url, task.formatSelector, taskDir.absolutePath,
+                        task.id, cookies, proxy, playlist, DownloadTaskStore.downloadThreads(this)
                     ).toString()''',
     "download service thread parameter",
 )

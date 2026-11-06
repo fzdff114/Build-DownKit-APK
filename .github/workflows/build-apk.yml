@@ -8,6 +8,7 @@ on:
       - ".github/scripts/patch_parallel_download.py"
       - ".github/scripts/test_parallel_http.py"
       - "DownKit-Android/app/src/main/python/parallel_http.py"
+      - ".github/workflows/build-apk.yml"
 
 permissions:
   contents: read

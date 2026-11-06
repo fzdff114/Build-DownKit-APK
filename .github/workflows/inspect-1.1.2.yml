@@ -1,0 +1,26 @@
+name: Inspect DownKit 1.1.2 Source
+on:
+  push:
+    paths:
+      - ".github/workflows/inspect-1.1.2.yml"
+permissions:
+  contents: read
+jobs:
+  inspect:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Download and unpack 1.1.2 source
+        run: |
+          set -euo pipefail
+          curl -fL --retry 3 --retry-delay 2 "https://github.com/$GITHUB_REPOSITORY/releases/download/v1.1.2/DownKit-Android-1.1.2-source.zip" -o "$RUNNER_TEMP/source.zip"
+          unzip -oq "$RUNNER_TEMP/source.zip" -d DownKit-Android
+          cat .github/patches/v1.1.2-replacement/overlay-part*.b64 | tr -d '\r\n ' | base64 --decode > "$RUNNER_TEMP/overlay.zip"
+          unzip -oq "$RUNNER_TEMP/overlay.zip" -d DownKit-Android
+      - name: Print relevant source
+        run: |
+          set +e
+          for f in DownKit-Android/app/src/main/java/com/downkit/android/MainActivity.kt DownKit-Android/app/src/main/java/com/downkit/android/DownloadTaskStore.kt DownKit-Android/app/src/main/java/com/downkit/android/DownloadService.kt DownKit-Android/app/src/main/java/com/downkit/android/DownloadEvents.kt DownKit-Android/app/src/main/python/bridge.py; do
+            echo "===== $f ====="
+            grep -nE '下载视频|下载音频|自动适配|主色|RGB|颜色|背景|displayMode|autoButtonColor|通知|Notification|format|extension|ext|mp4|webm|dark|light|theme|set.*Mode|MODE_NIGHT|setStyle' "$f" | head -n 240
+          done

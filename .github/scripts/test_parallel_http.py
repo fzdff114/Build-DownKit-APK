@@ -67,7 +67,7 @@ class FakeDownloader:
 
     def try_rename(self, source, destination):
         os.replace(source, destination)
-        return True
+        # yt-dlp FileDownloader.try_rename returns None after a successful os.replace.
 
     def try_utime(self, *args):
         return 0

@@ -211,7 +211,7 @@ main = replace_once(main,
                     ReleaseInfo(version, tag, release.optString("html_url", RELEASES_URL), asset.optString("browser_download_url"), asset.optString("digest"), release.optString("body").take(900))''',
 '''                    val tag = release.optString("tag_name", "").trim()
                     val notes = release.optString("body")
-                    val version = Regex("(?im)^App version:\\s*([0-9]+(?:\\.[0-9]+){1,3})")
+                    val version = Regex("(?im)^App version:\\\\s*([0-9]+(?:\\\\.[0-9]+){1,3})")
                         .find(notes)?.groupValues?.get(1)
                         ?: tag.removePrefix("v").removePrefix("V")
                     val assets = release.optJSONArray("assets") ?: org.json.JSONArray()

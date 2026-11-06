@@ -322,8 +322,7 @@ def parallel_download(self, filename, info_dict, requested_workers):
         actual_size = os.path.getsize(tmpfilename)
         if actual_size != total_size:
             raise IOError(f"合并后文件大小不匹配：预期 {total_size}，实际 {actual_size}")
-        if not self.try_rename(tmpfilename, filename):
-            raise IOError("无法将完整分段文件移动到目标位置")
+        self.try_rename(tmpfilename, filename)
         if self.params.get("updatetime") and last_modified:
             info_dict["filetime"] = self.try_utime(filename, last_modified)
         self._hook_progress({

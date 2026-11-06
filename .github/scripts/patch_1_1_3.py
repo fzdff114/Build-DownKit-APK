@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 from pathlib import Path
-root = Path(__file__).resolve().parents[2]
+root = Path(__file__).resolve().parents[2] / "DownKit-Android"
 main_path = root / "app/src/main/java/com/downkit/android/MainActivity.kt"
 service_path = root / "app/src/main/java/com/downkit/android/DownloadService.kt"
 gradle_path = root / "app/build.gradle.kts"

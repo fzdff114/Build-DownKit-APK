@@ -109,6 +109,7 @@ def parallel_download(self, filename, info_dict, requested_workers):
 
     from yt_dlp.networking import Request
     from yt_dlp.utils import DownloadCancelled, parse_http_range
+    from yt_dlp.networking.exceptions import HTTPError
     from yt_dlp.utils.networking import HTTPHeaderDict
 
     url = info_dict["url"]
@@ -136,6 +137,12 @@ def parallel_download(self, filename, info_dict, requested_workers):
         if total_size is None or int(total_size) < 2:
             return None
         total_size = int(total_size)
+        minimum = self.params.get("min_filesize")
+        maximum = self.params.get("max_filesize")
+        if minimum is not None and total_size < minimum:
+            return None
+        if maximum is not None and total_size > maximum:
+            return None
         first_byte = probe.read(2)
         if len(first_byte) != 1:
             return None
@@ -262,6 +269,12 @@ def parallel_download(self, filename, info_dict, requested_workers):
                 return index
             except (RangeUnsupported, DownloadCancelled):
                 raise
+            except HTTPError as exc:
+                if getattr(exc, "status", None) in (400, 403, 405, 416, 501):
+                    raise RangeUnsupported("服务器拒绝 HTTP Range 请求") from exc
+                last_error = exc
+                if attempt < 2:
+                    time.sleep(0.25 * (attempt + 1))
             except Exception as exc:
                 last_error = exc
                 if attempt < 2:

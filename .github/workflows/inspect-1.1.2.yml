@@ -20,6 +20,14 @@ jobs:
       - name: Print relevant source
         run: |
           set +e
+          sed -n '440,760p' DownKit-Android/app/src/main/java/com/downkit/android/MainActivity.kt
+          echo '===== SETTINGS/TAIL ====='
+          sed -n '1180,1485p' DownKit-Android/app/src/main/java/com/downkit/android/MainActivity.kt
+          echo '===== SERVICE ====='
+          sed -n '115,190p' DownKit-Android/app/src/main/java/com/downkit/android/DownloadService.kt
+          echo '===== BRIDGE ====='
+          sed -n '120,180p' DownKit-Android/app/src/main/python/bridge.py
+          echo '===== KEYWORD GREP ====='
           for f in DownKit-Android/app/src/main/java/com/downkit/android/MainActivity.kt DownKit-Android/app/src/main/java/com/downkit/android/DownloadTaskStore.kt DownKit-Android/app/src/main/java/com/downkit/android/DownloadService.kt DownKit-Android/app/src/main/java/com/downkit/android/DownloadEvents.kt DownKit-Android/app/src/main/python/bridge.py; do
             echo "===== $f ====="
             grep -nE '下载视频|下载音频|自动适配|主色|RGB|颜色|背景|displayMode|autoButtonColor|通知|Notification|format|extension|ext|mp4|webm|dark|light|theme|set.*Mode|MODE_NIGHT|setStyle' "$f" | head -n 240

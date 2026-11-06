@@ -27,7 +27,10 @@ jobs:
           sed -n '115,190p' DownKit-Android/app/src/main/java/com/downkit/android/DownloadService.kt
           echo '===== BRIDGE ====='
           sed -n '120,180p' DownKit-Android/app/src/main/python/bridge.py
-          echo '===== CREATE/RESTORE ====='
+          echo '===== BACKGROUND FUNCTIONS ====='
+          sed -n '745,835p' DownKit-Android/app/src/main/java/com/downkit/android/MainActivity.kt
+          sed -n '835,920p' DownKit-Android/app/src/main/java/com/downkit/android/MainActivity.kt
+          echo '===== CREATE/RESTORE =====
           grep -nE 'currentTab|renderHome\(\)|renderTasks\(\)|renderSettings\(\)|onSaveInstanceState|savedInstanceState' DownKit-Android/app/src/main/java/com/downkit/android/MainActivity.kt || true
           echo '===== TOP/DOWNLOAD/SETTINGS =====
           sed -n '70,135p' DownKit-Android/app/src/main/java/com/downkit/android/MainActivity.kt

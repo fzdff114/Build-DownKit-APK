@@ -55,7 +55,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          for part in 01 02 03 04 05 06; do
+          for part in 01 02 03 04 05 06 07; do
             test -s ".github/patches/v1.1.2-replacement/overlay-part${part}.b64"
           done
           cat .github/patches/v1.1.2-replacement/overlay-part*.b64 | tr -d '\r\n ' | base64 --decode > "$RUNNER_TEMP/downkit-1.1.2-replacement.zip"

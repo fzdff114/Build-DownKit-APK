@@ -55,7 +55,7 @@ jobs:
           grep -q 'versionName = "1.1.3"' DownKit-Android/app/build.gradle.kts
           grep -q 'class BackgroundCropView' DownKit-Android/app/src/main/java/com/downkit/android/BackgroundCropView.kt
 
-      - name: Apply DownKit 1.1.4 corrections
+      - name: Apply DownKit 1.1.3 replacement fixes
         shell: bash
         run: |
           set -euo pipefail
@@ -63,7 +63,7 @@ jobs:
           MAIN="DownKit-Android/app/src/main/java/com/downkit/android/MainActivity.kt"
           GRADLE="DownKit-Android/app/build.gradle.kts"
           grep -q 'versionCode = 9' "$GRADLE"
-          grep -q 'versionName = "1.1.4"' "$GRADLE"
+          grep -q 'versionName = "1.1.3"' "$GRADLE"
           grep -q 'setSingleChoiceItems(labels, checked)' "$MAIN"
           grep -q 'showFormatPicker(kind)' "$MAIN"
           grep -Fq 'categoryButton("video", videoFormats.size, "视频选项")' "$MAIN"
@@ -166,16 +166,16 @@ jobs:
         run: |
           set -euo pipefail
           mkdir -p release-package
-          cp DownKit-Android/app/build/outputs/apk/release/app-release.apk release-package/DownKit-1.1.4-arm64.apk
-          (cd DownKit-Android && zip -qr -X "$GITHUB_WORKSPACE/release-package/DownKit-Android-1.1.4-source.zip" . -x '*/build/*' '.gradle/*' '*/.cxx/*' 'local.properties')
-          (cd release-package && sha256sum DownKit-1.1.4-arm64.apk DownKit-Android-1.1.4-source.zip > SHA256SUMS.txt)
-          unzip -t release-package/DownKit-Android-1.1.4-source.zip >/dev/null
+          cp DownKit-Android/app/build/outputs/apk/release/app-release.apk release-package/DownKit-1.1.3-arm64.apk
+          (cd DownKit-Android && zip -qr -X "$GITHUB_WORKSPACE/release-package/DownKit-Android-1.1.3-source.zip" . -x '*/build/*' '.gradle/*' '*/.cxx/*' 'local.properties')
+          (cd release-package && sha256sum DownKit-1.1.3-arm64.apk DownKit-Android-1.1.3-source.zip > SHA256SUMS.txt)
+          unzip -t release-package/DownKit-Android-1.1.3-source.zip >/dev/null
           ls -lh release-package/
 
       - name: Upload signed release package
         uses: actions/upload-artifact@v4
         with:
-          name: DownKit-1.1.4-release-package
+          name: DownKit-1.1.3-release-package
           path: release-package/*
           if-no-files-found: error
           retention-days: 30

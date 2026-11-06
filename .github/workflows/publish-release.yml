@@ -39,24 +39,29 @@ jobs:
           NOTES="$(cat <<'EOF'
           # DownKit 1.1.2
 
-          ARM64 Android release, signed with the same persistent Release key as 1.1.1.
+          Replacement build for the existing 1.1.2 release. ARM64 Android APK signed with the same persistent Release key. The visible version remains 1.1.2 while versionCode is increased to 7 so Android can install it over the previous 1.1.2 build.
 
-          ## What's new
-          - Download task cards now show the actual media container/format and resolution, such as MP4, WebM, MKV, M4A, 1920×1080 or 1280×720, based on yt-dlp's real format metadata rather than forcing MP4.
-          - During fragmented downloads, task details show the current fragment and total fragment count when the site exposes them.
-          - Notification content is simplified to the file name and concise progress/status only.
-          - Import a picture in Settings to use it as the app background. The selected image URI is persisted and restored after restarting the app; a restore-default action is provided.
-          - Customize button accent color with RGB sliders inside a collapsed color panel in Settings. The color controls expand only when requested and the selected color persists across launches.
-          - Existing application ID and fixed signing identity are retained to support in-place upgrades from 1.1.1.
+          ## What's improved
+          - Background import opens a crop editor. Drag inside the crop box to move it and drag the four corner handles to resize it.
+          - The crop selection keeps the app page's aspect ratio. The high-quality cropped image is saved inside the app and remains after restart.
+          - Background rendering uses full-image fitting rather than forced CENTER_CROP, avoiding the old double-crop / incomplete-background issue.
+          - Added display mode controls: System default, Light and Dark. The selected mode is saved and restored.
+          - Added automatic button accent matching from the background's dominant color. It re-evaluates when the background changes.
+          - Kept manual RGB controls. Moving an RGB slider turns off automatic color matching; the manual color persists.
+          - Existing download format/resolution, fragment progress, compact notifications and download features are retained.
 
           ## Downloads
           - DownKit-1.1.2-arm64.apk — ARM64 Android installer.
           - DownKit-Android-1.1.2-source.zip — complete public Android Studio source.
           - SHA256SUMS.txt — SHA-256 checksums.
 
+          ## Upgrade
+          Uses the same application ID and the same fixed Release signing key as previous 1.1.2, with versionCode 7 for an in-place upgrade. No uninstall should be required.
+
           ## Compatibility
-          Uses yt-dlp and inherits the supported-site and site-change limitations of yt-dlp. Some sites may require login cookies or may change their formats. DRM-protected media is not supported.
+          Uses yt-dlp and inherits supported-site and site-change limitations. Some sites may require user-supplied cookies or specific network access. DRM-protected media is not supported.
           EOF
           )"
-          gh release create "$TAG" release-package/DownKit-1.1.2-arm64.apk release-package/DownKit-Android-1.1.2-source.zip release-package/SHA256SUMS.txt --repo "$GITHUB_REPOSITORY" --title "DownKit 1.1.2" --notes "$NOTES"
+          gh release edit "$TAG" --repo "$GITHUB_REPOSITORY" --title "DownKit 1.1.2" --notes "$NOTES"
+          gh release upload "$TAG" release-package/DownKit-1.1.2-arm64.apk release-package/DownKit-Android-1.1.2-source.zip release-package/SHA256SUMS.txt --repo "$GITHUB_REPOSITORY" --clobber
           gh release view "$TAG" --repo "$GITHUB_REPOSITORY" --json url,name,isPrerelease,assets

@@ -168,6 +168,11 @@ jobs:
           APK="app/build/outputs/apk/release/app-release.apk"
           test -s "$APK"
           "$ANDROID_HOME/build-tools/36.0.0/apksigner" verify --verbose --print-certs "$APK"
+          BADGING="$("$ANDROID_HOME/build-tools/36.0.0/aapt" dump badging "$APK")"
+          grep -Fq "versionName='1.1.3' versionCode='9'" <<< "$BADGING"
+          unzip -l "$APK" | grep -q 'lib/arm64-v8a/'
+          ! unzip -l "$APK" | grep -Eq 'lib/(x86|x86_64|armeabi-v7a)/'
+          echo "APK metadata verified: app version 1.1.3, versionCode 9, ARM64 only."
 
       - name: Package APK, source and checksums
         shell: bash

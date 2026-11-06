@@ -144,6 +144,7 @@ renderer = '''    private fun renderFormatOptions() {
                 }
                 isAllCaps = false
                 maxLines = 2
+                ellipsize = android.text.TextUtils.TruncateAt.END
                 textSize = 12f
                 minWidth = 0
                 minHeight = dp(58)
@@ -199,6 +200,26 @@ renderer = '''    private fun renderFormatOptions() {
 
 '''
 main = main[:start] + renderer + main[end:]
+
+main = replace_once(main,
+'''                    val tag = release.optString("tag_name", "").trim()
+                    val version = tag.removePrefix("v").removePrefix("V")
+                    val assets = release.optJSONArray("assets") ?: org.json.JSONArray()
+                    val asset = (0 until assets.length()).mapNotNull { assets.optJSONObject(it) }.firstOrNull {
+                        it.optString("name").endsWith(".apk", ignoreCase = true)
+                    } ?: throw IllegalStateException("最新发行版没有 APK 安装文件")
+                    ReleaseInfo(version, tag, release.optString("html_url", RELEASES_URL), asset.optString("browser_download_url"), asset.optString("digest"), release.optString("body").take(900))''',
+'''                    val tag = release.optString("tag_name", "").trim()
+                    val notes = release.optString("body")
+                    val version = Regex("(?im)^App version:\\s*([0-9]+(?:\\.[0-9]+){1,3})")
+                        .find(notes)?.groupValues?.get(1)
+                        ?: tag.removePrefix("v").removePrefix("V")
+                    val assets = release.optJSONArray("assets") ?: org.json.JSONArray()
+                    val asset = (0 until assets.length()).mapNotNull { assets.optJSONObject(it) }.firstOrNull {
+                        it.optString("name").endsWith(".apk", ignoreCase = true)
+                    } ?: throw IllegalStateException("最新发行版没有 APK 安装文件")
+                    ReleaseInfo(version, tag, release.optString("html_url", RELEASES_URL), asset.optString("browser_download_url"), asset.optString("digest"), notes.take(900))''',
+"replacement release version detection")
 
 # Decode the content URI immediately, explain failures, and save the cropped bitmap locally.
 main = replace_once(main,
@@ -288,6 +309,8 @@ if "colorPreview" in main or "按钮颜色预览" in main:
     raise SystemExit("Button preview code remains")
 if "setSingleChoiceItems(labels, checked)" not in main or 'showFormatPicker(kind)' not in main:
     raise SystemExit("Format category chooser did not install")
+if 'App version:' not in main or 'Regex("(?im)^App version:' not in main:
+    raise SystemExit("Release asset app-version detection did not install")
 if 'backgroundPicker.launch("image/*")' not in main:
     raise SystemExit("GetContent picker launch did not install")
 

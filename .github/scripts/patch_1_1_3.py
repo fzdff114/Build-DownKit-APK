@@ -57,12 +57,12 @@ main = main[:pos] + """when (currentTab) {
             else -> renderHome()
         }""" + main[pos + len("renderHome()"): ]
 if 'outState.putInt("downkit.current.tab", currentTab)' not in main:
-    anchor = "        outState.putString("downkit.input.url", urlField?.text?.toString()?.trim().orEmpty().ifBlank { savedInputUrl })"
+    anchor = '        outState.putString("downkit.input.url", urlField?.text?.toString()?.trim().orEmpty().ifBlank { savedInputUrl })'
     if anchor not in main: raise SystemExit("Missing onSaveInstanceState anchor")
     main = main.replace(anchor, '        outState.putInt("downkit.current.tab", currentTab)\n' + anchor, 1)
 start = main.find("        val autoAccentSwitch = SwitchCompat(this).apply")
 if start >= 0:
-    end = main.find("        appearance.addView(text("开启后会提取当前背景的主要颜色", start)
+    end = main.find('        appearance.addView(text("开启后会提取当前背景的主要颜色', start)
     if end < 0: raise SystemExit("Missing auto color help anchor")
     main = main[:start] + "        if (DownloadTaskStore.backgroundUri(this).isNotBlank()) {\n" + main[start:end] + "        }\n" + main[end:]
 preview_start = main.find("        appearance.addView(MaterialButton(this).apply {", main.find("打开 RGB 调色功能"))

@@ -20,10 +20,11 @@ if "versionCode = 8" in gradle:
     gradle = gradle.replace("versionCode = 8", "versionCode = 9", 1)
 elif "versionCode = 9" not in gradle:
     raise SystemExit("Expected versionCode 8 or 9 baseline")
-# Public APK name/version stays 1.1.3; versionCode 9 preserves in-place upgrade from the original 1.1.3/1.1.2 release chain.
-gradle = gradle.replace('versionName = "1.1.4"', 'versionName = "1.1.3"', 1)
-if 'versionName = "1.1.3"' not in gradle or "versionCode = 9" not in gradle:
-    raise SystemExit("Final app version must be 1.1.3 (versionCode 9)")
+# Publish a genuine 1.1.4 application while retaining upgrade compatibility with 1.1.2/1.1.3.
+if 'versionName = "1.1.3"' in gradle:
+    gradle = gradle.replace('versionName = "1.1.3"', 'versionName = "1.1.4"', 1)
+if 'versionName = "1.1.4"' not in gradle or "versionCode = 9" not in gradle:
+    raise SystemExit("Final app version must be 1.1.4 (versionCode 9)")
 
 # Use the system content picker; the crop is copied into private app storage.
 main = replace_once(main,
@@ -496,4 +497,4 @@ bridge = replace_once(bridge,
 bridge_path.write_text(bridge, encoding="utf-8")
 main_path.write_text(main, encoding="utf-8")
 gradle_path.write_text(gradle, encoding="utf-8")
-print("DownKit 1.1.3 replacement fixes applied (versionCode 9)")
+print("DownKit 1.1.4 corrections applied (versionCode 9)")

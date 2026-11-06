@@ -389,11 +389,13 @@ if "private fun buildDownKitNotification" not in service:
     val fragment = task?.fragmentInfo.orEmpty()
     val detail = task?.detail.orEmpty()
     val progressText = if (progress > 0) "$progress%" else status
+    val mediaShort = media.split(" · ").take(2).joinToString(" · ")
+    val detailShort = detail.removePrefix("已下载 ")
     val speedEta = listOf(
         task?.speed?.takeIf { it.isNotBlank() }?.let { "速度 $it" },
         task?.eta?.takeIf { it.isNotBlank() }?.let { "剩余 $it" }
     ).filterNotNull().joinToString(" · ")
-    val compact = listOf(media, progressText, fragment, detail, speedEta).filter { it.isNotBlank() }.joinToString(" · ").take(180)
+    val compact = listOf(mediaShort, progressText, detailShort).filter { it.isNotBlank() }.joinToString(" · ").take(110)
     val expanded = listOf(
         "状态：$status",
         media,

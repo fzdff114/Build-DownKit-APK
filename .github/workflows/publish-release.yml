@@ -23,49 +23,45 @@ jobs:
           BUILD_RUN_ID: ${{ github.event.workflow_run.id }}
         run: |
           set -euo pipefail
-          gh run download "$BUILD_RUN_ID" --repo "$GITHUB_REPOSITORY" --name DownKit-1.1.3-release-package --dir release-package
-          test -s release-package/DownKit-1.1.3-arm64.apk
-          test -s release-package/DownKit-Android-1.1.3-source.zip
+          gh run download "$BUILD_RUN_ID" --repo "$GITHUB_REPOSITORY" --name DownKit-1.1.4-release-package --dir release-package
+          test -s release-package/DownKit-1.1.4-arm64.apk
+          test -s release-package/DownKit-Android-1.1.4-source.zip
           test -s release-package/SHA256SUMS.txt
           (cd release-package && sha256sum --check SHA256SUMS.txt)
-          unzip -t release-package/DownKit-Android-1.1.3-source.zip >/dev/null
+          unzip -t release-package/DownKit-Android-1.1.4-source.zip >/dev/null
 
-      - name: Publish DownKit 1.1.3
+      - name: Publish DownKit 1.1.4
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
           set -euo pipefail
-          TAG="v1.1.3"
+          TAG="v1.1.4"
           NOTES="$(cat <<'EOF'
-          # DownKit 1.1.3
+          # DownKit 1.1.4
 
-          New DownKit 1.1.3 release. ARM64 Android APK signed with the same persistent Release key. Version 1.1.3 uses versionCode 8 and can upgrade the previous 1.1.2 build in place.
+          This release corrects the format-selection and background appearance controls from 1.1.3.
 
-          ## What's improved
-          - Background import opens a crop editor. Drag inside the crop box to move it and drag the four corner handles to resize it.
-          - The crop selection keeps the app page's aspect ratio. The high-quality cropped image is saved inside the app and remains after restart.
-          - Background rendering uses full-image fitting rather than forced CENTER_CROP, avoiding the old double-crop / incomplete-background issue.
-          - Added display mode controls: System default, Light and Dark. The selected mode is saved and restored.
-          - Added automatic button accent matching from the background's dominant color. It re-evaluates when the background changes.
-          - Kept manual RGB controls. Moving an RGB slider turns off automatic color matching; the manual color persists.
-          - Existing download format/resolution, fragment progress, compact notifications and download features are retained.
-
-          ## Downloads
-          - DownKit-1.1.3-arm64.apk — ARM64 Android installer.
-          - DownKit-Android-1.1.3-source.zip — complete public Android Studio source.
-          - SHA256SUMS.txt — SHA-256 checksums.
-
-          ## Upgrade
-          Uses the same application ID and the same fixed Release signing key as 1.1.2, with versionCode 8 for an in-place upgrade. No uninstall should be required.
+          ## Fixes
+          - After parsing, the home page shows two category choices: Video and Audio. Each opens its own list of formats returned by yt-dlp.
+          - Format rows show the actual parsed resolution, container extension and available size/quality details. Selecting a row does not immediately start a download; confirm with “Download selected format”.
+          - Background import uses the system content picker and opens the crop editor. The selected crop is saved inside the app, so the app does not depend on retaining the source image permission.
+          - Auto-match background accent is hidden until a custom background has been imported. It remains opt-in and re-evaluates when the background is changed.
+          - Removed the “Button color preview” control. Manual RGB sliders and the restore-default-color action remain available.
 
           ## Compatibility
-          Uses yt-dlp and inherits supported-site and site-change limitations. Some sites may require user-supplied cookies or specific network access. DRM-protected media is not supported.
+          - Same application ID and persistent release signing key as 1.1.3; versionCode 9 allows an in-place upgrade.
+          - ARM64 Android APK. yt-dlp site support still depends on target-site changes, network and login requirements. DRM-protected media is not supported.
+
+          ## Downloads
+          - DownKit-1.1.4-arm64.apk — signed ARM64 installer.
+          - DownKit-Android-1.1.4-source.zip — Android Studio source.
+          - SHA256SUMS.txt — SHA-256 checksums.
           EOF
           )"
           if gh release view "$TAG" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
-            gh release edit "$TAG" --repo "$GITHUB_REPOSITORY" --title "DownKit 1.1.3" --notes "$NOTES"
+            gh release edit "$TAG" --repo "$GITHUB_REPOSITORY" --title "DownKit 1.1.4" --notes "$NOTES"
           else
-            gh release create "$TAG" --repo "$GITHUB_REPOSITORY" --title "DownKit 1.1.3" --notes "$NOTES"
+            gh release create "$TAG" --repo "$GITHUB_REPOSITORY" --title "DownKit 1.1.4" --notes "$NOTES"
           fi
-          gh release upload "$TAG" release-package/DownKit-1.1.3-arm64.apk release-package/DownKit-Android-1.1.3-source.zip release-package/SHA256SUMS.txt --repo "$GITHUB_REPOSITORY" --clobber
+          gh release upload "$TAG" release-package/DownKit-1.1.4-arm64.apk release-package/DownKit-Android-1.1.4-source.zip release-package/SHA256SUMS.txt --repo "$GITHUB_REPOSITORY" --clobber
           gh release view "$TAG" --repo "$GITHUB_REPOSITORY" --json url,name,isPrerelease,assets

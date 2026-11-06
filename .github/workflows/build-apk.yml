@@ -186,7 +186,7 @@ jobs:
           CERTS="$("$ANDROID_HOME/build-tools/36.0.0/apksigner" verify --verbose --print-certs "$APK")"
           grep -Fq "Signer #1 certificate SHA-256 digest: ca296e9535db5eb07e3bf852ea644cf5edd66154024d496dca74e565fd66ce24" <<< "$CERTS"
           BADGING="$("$ANDROID_HOME/build-tools/36.0.0/aapt" dump badging "$APK")"
-          grep -Fq "versionName='1.1.4' versionCode='9'" <<< "$BADGING"
+          grep -Fq "versionCode='9' versionName='1.1.4'" <<< "$BADGING"
           unzip -l "$APK" | grep -q 'lib/arm64-v8a/'
           ! unzip -l "$APK" | grep -Eq 'lib/(x86|x86_64|armeabi-v7a)/'
           echo "APK metadata verified: app version 1.1.4, versionCode 9, ARM64 only."

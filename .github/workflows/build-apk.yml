@@ -65,10 +65,28 @@ jobs:
           grep -q 'versionName = "1.1.4"' "$GRADLE"
           grep -q 'setSingleChoiceItems(labels, checked)' "$MAIN"
           grep -q 'showFormatPicker(kind)' "$MAIN"
+          grep -Fq 'categoryButton("video", videoFormats.size, "视频选项")' "$MAIN"
+          grep -Fq 'categoryButton("audio", audioFormats.size, "音频选项")' "$MAIN"
+          grep -Fq 'text = "开始下载"' "$MAIN"
+          grep -Fq '.setPositiveButton("确定", null)' "$MAIN"
+          grep -Fq 'FormatChoice("自动最佳画质 · 视频 + 音频"' "$MAIN"
+          grep -Fq 'FormatChoice("仅音频 · 最佳可用音质"' "$MAIN"
           grep -q 'ActivityResultContracts.GetContent()' "$MAIN"
           grep -Fq 'backgroundPicker.launch("image/*")' "$MAIN"
+          grep -Fq 'BackgroundCropView(this, bitmap, aspect)' "$MAIN"
+          grep -Fq 'cropView.createCroppedBitmap()' "$MAIN"
+          grep -Fq 'listOf("system" to "系统默认", "light" to "浅色", "dark" to "深色")' "$MAIN"
           grep -q 'if (DownloadTaskStore.backgroundUri(this).isNotBlank())' "$MAIN"
+          grep -Fq 'autoButtonColorEnabled = hasStoredBackground && DownloadTaskStore.autoButtonColor(this)' "$MAIN"
           ! grep -q '按钮颜色预览\|colorPreview' "$MAIN"
+          python3 - <<'PY'
+          from pathlib import Path
+          main = Path("DownKit-Android/app/src/main/java/com/downkit/android/MainActivity.kt").read_text(encoding="utf-8")
+          start = main.index("private fun showFormatPicker")
+          end = main.index("private fun parseLink", start)
+          if "startDownload()" in main[start:end]:
+              raise SystemExit("Format selection must not start a download")
+          PY
           python3 -m py_compile DownKit-Android/app/src/main/python/bridge.py
           python3 -m py_compile .github/scripts/patch_1_1_4.py
 

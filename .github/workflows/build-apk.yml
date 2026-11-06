@@ -110,7 +110,7 @@ jobs:
           grep -Fq 'val threadCountSeek = SeekBar(this)' "$MAIN"
           grep -Fq 'DownloadTaskStore.downloadThreads(this)' "$SERVICE"
           grep -Fq 'download_threads: int = 1' "$PYTHON/bridge.py"
-          python3 .github/scripts/test_parallel_http.py
+          PYTHONPATH="$PYTHON" python3 .github/scripts/test_parallel_http.py
           python3 -m py_compile "$PYTHON/bridge.py" "$PYTHON/parallel_http.py"
           python3 -m py_compile .github/scripts/patch_1_1_4.py .github/scripts/patch_parallel_download.py .github/scripts/test_parallel_http.py
 

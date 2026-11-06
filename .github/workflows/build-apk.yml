@@ -91,6 +91,14 @@ jobs:
           if "Regex(\"(?im)^App version:" not in main:
               raise SystemExit("Release notes App version must override the release tag")
           PY
+          SERVICE="DownKit-Android/app/src/main/java/com/downkit/android/DownloadService.kt"
+          grep -Fq 'private fun buildDownKitNotification' "$SERVICE"
+          grep -Fq '.setStyle(NotificationCompat.BigTextStyle()' "$SERVICE"
+          grep -Fq '.setContentText(compact)' "$SERVICE"
+          grep -Fq 'val selectedSummary = selected?.label' "$MAIN"
+          grep -Fq 'val actualFormat = task.mediaInfo.ifBlank { task.formatLabel }' "$MAIN"
+          ! grep -Fq 'views.status.text = "${task.status} · ${task.formatLabel}"' "$MAIN"
+          grep -Fq 'detail = f"已下载 {downloaded_text}/{total_text}"' DownKit-Android/app/src/main/python/bridge.py
           python3 -m py_compile DownKit-Android/app/src/main/python/bridge.py
           python3 -m py_compile .github/scripts/patch_1_1_4.py
 

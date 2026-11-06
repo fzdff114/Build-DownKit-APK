@@ -15,7 +15,9 @@ def replace_once(source, old, new, name):
 if 'versionName = "1.1.3"' not in gradle or "versionCode = 8" not in gradle:
     raise SystemExit("Expected DownKit 1.1.3/versionCode 8 baseline")
 gradle = gradle.replace("versionCode = 8", "versionCode = 9", 1)
-gradle = gradle.replace('versionName = "1.1.3"', 'versionName = "1.1.4"', 1)
+# Keep the displayed app version aligned with the public v1.1.3 download. Only versionCode advances for upgrade compatibility.
+if 'versionName = "1.1.3"' not in gradle:
+    raise SystemExit("Refusing to change displayed version away from 1.1.3")
 
 # Use the system content picker; the crop is copied into private app storage.
 main = replace_once(main,
@@ -316,4 +318,4 @@ if 'backgroundPicker.launch("image/*")' not in main:
 
 main_path.write_text(main, encoding="utf-8")
 gradle_path.write_text(gradle, encoding="utf-8")
-print("DownKit 1.1.4 fixes applied")
+print("DownKit 1.1.3 replacement fixes applied (versionCode 9)")

@@ -89,4 +89,4 @@ service = service.replace('.setContentText(if (progress in 1..99) "$progress%" e
 gradle_path.write_text(gradle, encoding="utf-8")
 main_path.write_text(main, encoding="utf-8")
 service_path.write_text(service, encoding="utf-8")
-print("DownKit 1.1.3 patch applied")
+# Release trigger: DownKit 1.1.3\nprint("DownKit 1.1.3 patch applied")

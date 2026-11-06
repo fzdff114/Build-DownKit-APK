@@ -6,6 +6,7 @@ on:
     paths:
       - ".github/scripts/patch_1_1_4.py"
       - ".github/workflows/build-apk.yml"
+      - ".github/workflows/publish-release.yml"
 
 permissions:
   contents: read
@@ -71,6 +72,7 @@ jobs:
           grep -Fq '.setPositiveButton("确定", null)' "$MAIN"
           grep -Fq 'FormatChoice("自动最佳画质 · 视频 + 音频"' "$MAIN"
           grep -Fq 'FormatChoice("仅音频 · 最佳可用音质"' "$MAIN"
+          grep -Fq 'Regex("(?im)^App version:' "$MAIN"
           grep -q 'ActivityResultContracts.GetContent()' "$MAIN"
           grep -Fq 'backgroundPicker.launch("image/*")' "$MAIN"
           grep -Fq 'BackgroundCropView(this, bitmap, aspect)' "$MAIN"
@@ -86,6 +88,8 @@ jobs:
           end = main.index("private fun parseLink", start)
           if "startDownload()" in main[start:end]:
               raise SystemExit("Format selection must not start a download")
+          if "Regex(\"(?im)^App version:" not in main:
+              raise SystemExit("Release notes App version must override the release tag")
           PY
           python3 -m py_compile DownKit-Android/app/src/main/python/bridge.py
           python3 -m py_compile .github/scripts/patch_1_1_4.py

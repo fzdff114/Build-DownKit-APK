@@ -45,9 +45,9 @@ jobs:
           curl -fL --retry 3 --retry-delay 2 \
             "https://github.com/$GITHUB_REPOSITORY/releases/download/v1.1.2/DownKit-Android-1.1.2-source.zip" \
             -o "$RUNNER_TEMP/downkit-1.1.2-source.zip"
-          unzip -t "$RUNNER_TEMP/downkit-1.1.1-source.zip" >/dev/null
+          unzip -t "$RUNNER_TEMP/downkit-1.1.2-source.zip" >/dev/null
           mkdir -p DownKit-Android
-          unzip -oq "$RUNNER_TEMP/downkit-1.1.1-source.zip" -d DownKit-Android
+          unzip -oq "$RUNNER_TEMP/downkit-1.1.2-source.zip" -d DownKit-Android
           test -f DownKit-Android/gradlew
           test -f DownKit-Android/app/src/main/java/com/downkit/android/MainActivity.kt
 

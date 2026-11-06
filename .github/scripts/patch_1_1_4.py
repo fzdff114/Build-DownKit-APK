@@ -69,7 +69,15 @@ main = replace_once(main,
         infoColumn.addView(text("先选择视频或音频，再从网站实际提供的格式列表中选择清晰度、封装和音质。", 10, false, Color.rgb(122, 132, 150)), margin(bottom = 6))
         formatGrid = GridLayout(this).apply { columnCount = 2; alignmentMode = GridLayout.ALIGN_BOUNDS; useDefaultMargins = false }
         formatScroll = null
-        infoColumn.addView(formatGrid!!, LinearLayout.LayoutParams(-1, ViewGroup.LayoutParams.WRAP_CONTENT).apply { bottomMargin = dp(7) })''', "format category UI")
+        infoColumn.addView(formatGrid!!, LinearLayout.LayoutParams(-1, ViewGroup.LayoutParams.WRAP_CONTENT).apply { bottomMargin = dp(7) })
+        downloadButton = MaterialButton(this).apply {
+            text = "开始下载"
+            isAllCaps = false
+            setIconResource(android.R.drawable.stat_sys_download)
+            isEnabled = false
+            setOnClickListener { startDownload() }
+        }
+        infoColumn.addView(downloadButton, LinearLayout.LayoutParams(-1, dp(48)))''', "format category UI")
 
 # Retain every parsed yt-dlp format and its actual label/selector/extension.
 main = replace_once(main,
@@ -105,6 +113,7 @@ main = replace_once(main,
         }
         selectedFormatIndex = 0
         renderFormatOptions()
+        downloadButton?.isEnabled = formats.isNotEmpty()
         val videoCount = formats.count { it.kind == "video" }
         val audioCount = formats.count { it.kind == "audio" }
         parseStageView?.text = "解析完成 · 视频格式 ${videoCount} 种 · 音频格式 ${audioCount} 种"''',
@@ -123,7 +132,12 @@ renderer = '''    private fun renderFormatOptions() {
 
         fun categoryButton(kind: String, count: Int, title: String) =
             MaterialButton(this, null, com.google.android.material.R.attr.materialButtonOutlinedStyle).apply {
-                text = if (count > 0) "$title\\n选择格式（$count 种）" else "$title\\n暂无可用格式"
+                val selected = formats.getOrNull(selectedFormatIndex)?.takeIf { it.kind == kind }
+                text = when {
+                    count == 0 -> "$title\\n暂无可用格式"
+                    selected != null -> "$title\\n${selected.label}"
+                    else -> "$title\\n选择格式（$count 种）"
+                }
                 isAllCaps = false
                 maxLines = 2
                 textSize = 12f
@@ -136,8 +150,8 @@ renderer = '''    private fun renderFormatOptions() {
             }
 
         listOf(
-            categoryButton("video", videoFormats.size, "视频下载"),
-            categoryButton("audio", audioFormats.size, "音频下载")
+            categoryButton("video", videoFormats.size, "视频选项"),
+            categoryButton("audio", audioFormats.size, "音频选项")
         ).forEach { button ->
             val params = GridLayout.LayoutParams(
                 GridLayout.spec(GridLayout.UNDEFINED),
@@ -159,19 +173,21 @@ renderer = '''    private fun renderFormatOptions() {
             return
         }
         val labels = choices.map { it.label }.toTypedArray()
-        var checked = 0
+        var checked = choices.indexOfFirst { formats.indexOf(it) == selectedFormatIndex }
+            .takeIf { it >= 0 } ?: 0
         val title = if (kind == "audio") "选择音频格式" else "选择视频格式"
         val dialog = androidx.appcompat.app.AlertDialog.Builder(this)
             .setTitle(title)
             .setSingleChoiceItems(labels, checked) { _, which -> checked = which }
             .setNegativeButton("取消", null)
-            .setPositiveButton("下载所选格式", null)
+            .setPositiveButton("确定", null)
             .create()
         dialog.setOnShowListener {
             dialog.getButton(androidx.appcompat.app.AlertDialog.BUTTON_POSITIVE).setOnClickListener {
                 selectedFormatIndex = formats.indexOf(choices[checked]).coerceAtLeast(0)
                 dialog.dismiss()
-                startDownload()
+                renderFormatOptions()
+                downloadButton?.isEnabled = true
             }
         }
         dialog.show()

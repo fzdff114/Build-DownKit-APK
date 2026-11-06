@@ -29,39 +29,59 @@ jobs:
           test -s release-package/SHA256SUMS.txt
           (cd release-package && sha256sum --check SHA256SUMS.txt)
           unzip -t release-package/DownKit-Android-1.1.4-source.zip >/dev/null
+          cp release-package/DownKit-1.1.4-arm64.apk release-package/DownKit-1.1.3-arm64.apk
+          cp release-package/DownKit-Android-1.1.4-source.zip release-package/DownKit-Android-1.1.3-source.zip
+          (cd release-package && sha256sum DownKit-1.1.3-arm64.apk DownKit-Android-1.1.3-source.zip > SHA256SUMS-v1.1.3.txt)
+          mv release-package/SHA256SUMS-v1.1.3.txt release-package/SHA256SUMS.txt
 
       - name: Publish DownKit 1.1.4
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
           set -euo pipefail
-          TAG="v1.1.4"
+          TAG="v1.1.3"
           NOTES="$(cat <<'EOF'
-          # DownKit 1.1.4
+          # DownKit 1.1.3 — replacement build
 
-          This release corrects the format-selection and background appearance controls from 1.1.3.
+          This updates the existing v1.1.3 release assets. The included Android application identifies itself as the corrected **1.1.4** build.
 
-          ## Fixes
-          - After parsing, the home page shows two category choices: Video and Audio. Each opens its own list of formats returned by yt-dlp.
-          - Format rows show the actual parsed resolution, container extension and available size/quality details. Selecting a row does not immediately start a download; confirm with “Download selected format”.
-          - Background import uses the system content picker and opens the crop editor. The selected crop is saved inside the app, so the app does not depend on retaining the source image permission.
-          - Auto-match background accent is hidden until a custom background has been imported. It remains opt-in and re-evaluates when the background is changed.
-          - Removed the “Button color preview” control. Manual RGB sliders and the restore-default-color action remain available.
+          App version: 1.1.4 (versionCode 9)
 
-          ## Compatibility
-          - Same application ID and persistent release signing key as 1.1.3; versionCode 9 allows an in-place upgrade.
-          - ARM64 Android APK. yt-dlp site support still depends on target-site changes, network and login requirements. DRM-protected media is not supported.
+          ## Corrections included
+          - The home screen has two distinct format-category entries: **Video options** and **Audio options**. Each opens its own list of formats actually returned by yt-dlp.
+          - Choosing a format only selects it. It does not immediately start a download. The separate **Start download** button starts the queued task.
+          - Automatic best quality, compatibility-first single-file and audio-only choices are retained.
+          - Format labels are constrained to the available button width and truncated cleanly on narrow screens.
+          - Background import opens the crop editor. The crop box can be moved and resized with its corner handles; the cropped image is saved in app-private storage.
+          - System default, Light and Dark display modes remain available.
+          - Automatic background-color matching is offered only after a custom background is imported.
+          - Removed the Button color preview control. RGB sliders and restore-default color remain.
+          - The in-app updater reads the App version field in these release notes, so a replacement binary can be detected even though the public release tag remains v1.1.3.
+
+          ## Upgrade compatibility
+          - Package ID remains `com.downkit.android`.
+          - The same persistent Release signing key is used.
+          - APK versionCode 9 is higher than v1.1.3 versionCode 8, so it supports an in-place upgrade.
+          - ARM64 (`arm64-v8a`) Android APK.
 
           ## Downloads
-          - DownKit-1.1.4-arm64.apk — signed ARM64 installer.
-          - DownKit-Android-1.1.4-source.zip — Android Studio source.
+          - DownKit-1.1.3-arm64.apk — stable v1.1.3 download URL; application version 1.1.4.
+          - DownKit-Android-1.1.3-source.zip — complete source for the replacement build.
           - SHA256SUMS.txt — SHA-256 checksums.
+
+          Site support depends on the target website, network and login state. DRM-protected media is not supported.
           EOF
           )"
-          if gh release view "$TAG" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
-            gh release edit "$TAG" --repo "$GITHUB_REPOSITORY" --title "DownKit 1.1.4" --notes "$NOTES"
-          else
-            gh release create "$TAG" --repo "$GITHUB_REPOSITORY" --title "DownKit 1.1.4" --notes "$NOTES"
+          gh release view "$TAG" --repo "$GITHUB_REPOSITORY" >/dev/null
+          gh release edit "$TAG" --repo "$GITHUB_REPOSITORY" --title "DownKit 1.1.3" --notes "$NOTES"
+          gh release upload "$TAG" release-package/DownKit-1.1.3-arm64.apk release-package/DownKit-Android-1.1.3-source.zip release-package/SHA256SUMS.txt --repo "$GITHUB_REPOSITORY" --clobber
+          mkdir -p release-verify
+          gh release download "$TAG" --repo "$GITHUB_REPOSITORY" --pattern "DownKit-1.1.3-arm64.apk" --pattern "DownKit-Android-1.1.3-source.zip" --pattern "SHA256SUMS.txt" --dir release-verify
+          (cd release-verify && sha256sum --check SHA256SUMS.txt)
+          unzip -t release-verify/DownKit-Android-1.1.3-source.zip >/dev/null
+          test -s release-verify/DownKit-1.1.3-arm64.apk
+          # Remove the automatically-created 1.1.4 tag so the existing v1.1.3 release remains the only public release slot.
+          if gh release view "v1.1.4" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
+            gh release delete "v1.1.4" --repo "$GITHUB_REPOSITORY" --yes --cleanup-tag
           fi
-          gh release upload "$TAG" release-package/DownKit-1.1.4-arm64.apk release-package/DownKit-Android-1.1.4-source.zip release-package/SHA256SUMS.txt --repo "$GITHUB_REPOSITORY" --clobber
           gh release view "$TAG" --repo "$GITHUB_REPOSITORY" --json url,name,isPrerelease,assets

@@ -12,12 +12,16 @@ def replace_once(source, old, new, name):
         raise SystemExit("Missing expected source block: " + name)
     return source.replace(old, new, 1)
 
-if 'versionName = "1.1.3"' not in gradle or "versionCode = 8" not in gradle:
-    raise SystemExit("Expected DownKit 1.1.3/versionCode 8 baseline")
-gradle = gradle.replace("versionCode = 8", "versionCode = 9", 1)
-# Keep the displayed app version aligned with the public v1.1.3 download. Only versionCode advances for upgrade compatibility.
-if 'versionName = "1.1.3"' not in gradle:
-    raise SystemExit("Refusing to change displayed version away from 1.1.3")
+if not ('versionName = "1.1.3"' in gradle or 'versionName = "1.1.4"' in gradle):
+    raise SystemExit("Expected a 1.1.3/1.1.4 DownKit source baseline")
+if "versionCode = 8" in gradle:
+    gradle = gradle.replace("versionCode = 8", "versionCode = 9", 1)
+elif "versionCode = 9" not in gradle:
+    raise SystemExit("Expected versionCode 8 or 9 baseline")
+# Public APK name/version stays 1.1.3; versionCode 9 preserves in-place upgrade from the original 1.1.3/1.1.2 release chain.
+gradle = gradle.replace('versionName = "1.1.4"', 'versionName = "1.1.3"', 1)
+if 'versionName = "1.1.3"' not in gradle or "versionCode = 9" not in gradle:
+    raise SystemExit("Final app version must be 1.1.3 (versionCode 9)")
 
 # Use the system content picker; the crop is copied into private app storage.
 main = replace_once(main,

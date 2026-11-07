@@ -38,7 +38,7 @@ DownKit 是面向 Android 用户的媒体下载工具，使用 [yt-dlp](https://
 
     ./gradlew --no-daemon assembleDebug
 
-正式发布需要在 GitHub Actions Secrets 中配置固定签名所需的四项仓库密钥。名称为 DOWNKIT_KEYSTORE_BASE64、DOWNKIT_STORE_PASSWORD、DOWNKIT_KEY_ALIAS 和 DOWNKIT_KEY_PASSWORD。不要将其值写入公开文件。
+正式发布需要在 GitHub Actions Secrets 中配置固定签名所需的四项仓库密钥。名称为 DOWNKIT_KEYSTORE_BASE64、DOWNKIT_STORE_PASSWORD、DOWNKIT_KEY_ALIAS 和 DOWNKIT_KEY_PASSWORD。
 
 ## 负责任地使用
 
